@@ -1,0 +1,41 @@
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.filtros-bloque { display: flex; flex-direction: column; gap: .6rem; align-items: flex-end; }
+.select-org {
+  padding: .45rem .9rem; border-radius: var(--radio); border: 1.5px solid var(--borde);
+  background: white; font-size: .85rem; font-weight: 500; color: var(--azul-acero);
+  min-width: 220px;
+}
+.select-org:focus { outline: none; border-color: var(--azul-marino); }
+.mi-org-label {
+  font-size: .85rem; font-weight: 600; color: var(--azul-marino);
+  background: var(--gris-fondo); padding: .5rem .9rem; border-radius: var(--radio);
+  border: 1.5px solid var(--borde);
+}
+.filtros { display: flex; gap: .5rem; flex-wrap: wrap; }
+.btn-filtro {
+  padding: .4rem 1rem; border-radius: var(--radio); border: 1.5px solid var(--borde);
+  background: white; cursor: pointer; font-size: .82rem; font-weight: 500; transition: all .15s;
+}
+.btn-filtro.activo { background: var(--azul-marino); color: white; border-color: var(--azul-marino); }
+.grid-elecciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.2rem; }
+.eleccion-card { display: flex; flex-direction: column; gap: .8rem; transition: box-shadow .15s; }
+.eleccion-card:hover { box-shadow: 0 4px 16px rgba(10,31,51,.12); }
+.eleccion-header { display: flex; align-items: center; justify-content: space-between; }
+.org-nombre { font-size: .78rem; color: var(--gris-piedra); }
+.eleccion-card h2 { font-family: var(--font-display); font-size: 1.08rem; color: var(--azul-marino); margin-bottom: 0; }
+.descripcion { font-size: .85rem; color: var(--gris-piedra); line-height: 1.5; }
+.eleccion-stats { display: flex; gap: 1rem; padding: .8rem; background: var(--gris-fondo); border-radius: var(--radio); }
+.stat { flex: 1; text-align: center; }
+.stat-val { display: block; font-weight: 700; font-size: 1.15rem; color: var(--azul-marino); }
+.stat-lbl { font-size: .68rem; color: #9CA3AF; text-transform: uppercase; letter-spacing: .3px; }
+.eleccion-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: auto; }
+.vacio { text-align: center; color: var(--gris-piedra); padding: 3rem; }
+
+@media (max-width: 700px) {
+  .page-header { flex-direction: column; align-items: stretch; }
+  .filtros-bloque { align-items: stretch; }
+  .select-org { width: 100%; }
+  .filtros { justify-content: space-between; }
+  .btn-filtro { flex: 1; text-align: center; }
+  .grid-elecciones { grid-template-columns: 1fr; }
+}

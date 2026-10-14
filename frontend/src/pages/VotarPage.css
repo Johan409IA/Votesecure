@@ -1,0 +1,30 @@
+.votar-container { display: flex; flex-direction: column; gap: 1.5rem; }
+.votar-header .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.votar-header h1 { font-family: var(--font-display); font-size: 1.4rem; color: var(--azul-marino); margin-bottom: .5rem; }
+.votar-header p  { color: var(--gris-piedra); margin-bottom: 1rem; }
+.seguridad-info  { display: flex; gap: .8rem; flex-wrap: wrap; }
+.seguridad-info span { font-size: .8rem; background: #EDF6F0; color: #1C7A4E; padding: .35rem .85rem; border-radius: var(--radio); border: 1px solid #BCE3CC; }
+.candidatos-titulo { margin-bottom: 1rem; }
+.grid-candidatos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.candidato-card { display: flex; flex-direction: column; align-items: center; gap: .8rem; cursor: pointer; position: relative; text-align: center; transition: all .15s; border: 2px solid transparent; }
+.candidato-card:hover { border-color: var(--borde); }
+.candidato-card.seleccionado { border-color: var(--rojo); background: #FBEEEF; }
+.candidato-foto { width: 88px; height: 88px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gris-fondo); }
+.candidato-foto img { width: 100%; height: 100%; object-fit: cover; }
+.foto-placeholder { width: 88px; height: 88px; border-radius: 50%; background: var(--azul-marino); color: white; font-family: var(--font-display); font-size: 2.3rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.candidato-info h3 { font-family: var(--font-display); font-size: 1rem; color: var(--azul-marino); }
+.candidato-info p  { font-size: .82rem; color: var(--gris-piedra); line-height: 1.4; }
+.check-icon { position: absolute; top: .8rem; right: .8rem; width: 26px; height: 26px; background: var(--rojo); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem; }
+.votar-actions { text-align: center; margin-top: 1.5rem; }
+.btn-votar { font-size: 1.05rem; padding: .85rem 2.5rem; }
+.ya-voto { text-align: center; padding: 3rem; }
+.ya-voto-check { display: flex; justify-content: center; margin-bottom: 1rem; }
+.ya-voto h2 { margin-bottom: .5rem; }
+.ya-voto p  { color: var(--gris-piedra); margin-bottom: 1.5rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(10,31,51,.55); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { max-width: 420px; width: 90%; padding: 2rem; border-top: 4px solid var(--rojo); }
+.modal h2 { margin-bottom: 1rem; }
+.modal-info { background: var(--gris-fondo); padding: 1rem; border-radius: var(--radio); margin: 1rem 0; }
+.modal-info p { font-size: .87rem; padding: .3rem 0; color: #475569; }
+.modal-actions { display: flex; gap: 1rem; justify-content: flex-end; }
+.vacio { text-align: center; padding: 2rem; color: var(--gris-piedra); }
