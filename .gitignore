@@ -16,9 +16,12 @@ build/
 .svelte-kit/
 coverage/
 .vite/
+.agents/
+.commandcode/
 .turbo/
 .parcel-cache/
 desktop.ini
+AGENTS.md
 .idea/
 .vscode/
 
