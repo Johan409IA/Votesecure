@@ -1,0 +1,188 @@
+CREATE DATABASE votescurebd;
+
+CREATE TABLE usuarios (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre varchar(120) NOT NULL CHECK (length(btrim(nombre)) > 0),
+    correo varchar(254) NOT NULL UNIQUE,
+    tipo_usuario varchar(13) NOT NULL CHECK (
+        tipo_usuario IN ('estudiante', 'docente', 'administrador')
+    ),
+    hash_contrasena varchar(255) NOT NULL CHECK (length(btrim(hash_contrasena)) >= 20),
+    correo_verificado_en timestamptz,
+    verificacion_hash bytea,
+    verificacion_expira_en timestamptz,
+    sesion_hash bytea,
+    sesion_expira_en timestamptz,
+    sesion_revocada_en timestamptz,
+    activo boolean NOT NULL DEFAULT true,
+    creado_en timestamptz NOT NULL DEFAULT now(),
+);
+
+CREATE TABLE secciones (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    codigo_curso varchar(30) NOT NULL CHECK (length(btrim(codigo_curso)) > 0),
+    nombre_curso varchar(160) NOT NULL CHECK (length(btrim(nombre_curso)) > 0),
+    periodo_academico varchar(30) NOT NULL CHECK (length(btrim(periodo_academico)) > 0),
+    codigo varchar(30) NOT NULL CHECK (length(btrim(codigo)) > 0),
+    activa boolean NOT NULL DEFAULT true,
+    UNIQUE (codigo_curso, periodo_academico, codigo)
+);
+
+CREATE TABLE matriculas (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    seccion_id bigint NOT NULL REFERENCES secciones(id) ON DELETE RESTRICT,
+    estudiante_id bigint NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+    activa boolean NOT NULL DEFAULT true,
+    UNIQUE (seccion_id, estudiante_id),
+    UNIQUE (id, seccion_id)
+);
+
+CREATE TABLE asignaciones_docentes (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    seccion_id bigint NOT NULL REFERENCES secciones(id) ON DELETE RESTRICT,
+    docente_id bigint NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+    activa boolean NOT NULL DEFAULT true,
+    UNIQUE (seccion_id, docente_id),
+    UNIQUE (id, seccion_id)
+);
+
+CREATE TABLE elecciones (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    seccion_id bigint NOT NULL REFERENCES secciones(id) ON DELETE RESTRICT,
+    eleccion_origen_id bigint UNIQUE,
+    nombre varchar(160) NOT NULL CHECK (length(btrim(nombre)) > 0),
+    tipo varchar(12) NOT NULL DEFAULT 'principal',
+    estado varchar(12) NOT NULL DEFAULT 'borrador',
+    inicia_en timestamptz NOT NULL,
+    cierra_en timestamptz NOT NULL,
+    cerrada_en timestamptz,
+    publicada_en timestamptz,
+    creada_por_usuario_id bigint NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+    cancelada_en timestamptz,
+    cancelada_por_usuario_id bigint REFERENCES usuarios(id) ON DELETE RESTRICT,
+    motivo_cancelacion varchar(500),
+    creado_en timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (id, seccion_id),
+    FOREIGN KEY (eleccion_origen_id, seccion_id)
+        REFERENCES elecciones(id, seccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE candidaturas (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    eleccion_id bigint NOT NULL,
+    seccion_id bigint NOT NULL,
+    matricula_id bigint NOT NULL,
+    UNIQUE (eleccion_id, matricula_id),
+    UNIQUE (id, eleccion_id),
+    FOREIGN KEY (eleccion_id, seccion_id)
+        REFERENCES elecciones(id, seccion_id) ON DELETE RESTRICT,
+    FOREIGN KEY (matricula_id, seccion_id)
+        REFERENCES matriculas(id, seccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE habilitaciones_voto (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    eleccion_id bigint NOT NULL,
+    seccion_id bigint NOT NULL,
+    matricula_id bigint NOT NULL,
+    ha_votado boolean NOT NULL DEFAULT false,
+    UNIQUE (eleccion_id, matricula_id),
+    FOREIGN KEY (eleccion_id, seccion_id)
+        REFERENCES elecciones(id, seccion_id) ON DELETE RESTRICT,
+    FOREIGN KEY (matricula_id, seccion_id)
+        REFERENCES matriculas(id, seccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE votos (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    eleccion_id bigint NOT NULL REFERENCES elecciones(id) ON DELETE RESTRICT,
+    candidatura_id bigint NOT NULL,
+    FOREIGN KEY (candidatura_id, eleccion_id)
+        REFERENCES candidaturas(id, eleccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE resultados_electorales (
+    eleccion_id bigint PRIMARY KEY REFERENCES elecciones(id) ON DELETE RESTRICT,
+    total_habilitados bigint NOT NULL CHECK (total_habilitados >= 0),
+    total_participantes bigint NOT NULL CHECK (total_participantes >= 0),
+    CHECK (total_participantes <= total_habilitados)
+);
+
+CREATE TABLE resultados_candidatos (
+    eleccion_id bigint NOT NULL REFERENCES resultados_electorales(eleccion_id)
+        ON DELETE RESTRICT,
+    candidatura_id bigint NOT NULL,
+    votos_obtenidos bigint NOT NULL CHECK (votos_obtenidos >= 0),
+    PRIMARY KEY (eleccion_id, candidatura_id),
+    FOREIGN KEY (candidatura_id, eleccion_id)
+        REFERENCES candidaturas(id, eleccion_id) ON DELETE RESTRICT
+);
+CREATE TABLE delegaciones (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    eleccion_id bigint NOT NULL UNIQUE,
+    seccion_id bigint NOT NULL,
+    candidatura_id bigint NOT NULL,
+    inicia_en timestamptz NOT NULL,
+    termina_en timestamptz,
+    UNIQUE (id, seccion_id),
+    CHECK (termina_en IS NULL OR termina_en > inicia_en),
+    FOREIGN KEY (eleccion_id, seccion_id)
+        REFERENCES elecciones(id, seccion_id) ON DELETE RESTRICT,
+    FOREIGN KEY (candidatura_id, eleccion_id)
+        REFERENCES candidaturas(id, eleccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE periodos_evaluacion (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    delegacion_id bigint NOT NULL UNIQUE,
+    seccion_id bigint NOT NULL,
+    abre_en timestamptz NOT NULL,
+    cierra_en timestamptz NOT NULL,
+    UNIQUE (id, seccion_id),
+    CHECK (cierra_en > abre_en),
+    FOREIGN KEY (delegacion_id, seccion_id)
+        REFERENCES delegaciones(id, seccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE eventos_auditoria (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    eleccion_id bigint NOT NULL REFERENCES elecciones(id) ON DELETE RESTRICT,
+    tipo_evento varchar(30) NOT NULL CHECK (
+        tipo_evento IN ('creacion', 'activacion', 'cancelacion', 'cierre_publicacion')
+    ),
+    actor_tipo varchar(8) NOT NULL CHECK (actor_tipo IN ('usuario', 'sistema')),
+    actor_usuario_id bigint REFERENCES usuarios(id) ON DELETE RESTRICT,
+    ocurrido_en timestamptz NOT NULL DEFAULT clock_timestamp(),
+    detalle jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+
+
+CREATE TABLE evaluaciones_estudiantes (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    periodo_evaluacion_id bigint NOT NULL,
+    seccion_id bigint NOT NULL,
+    matricula_id bigint NOT NULL,
+    calificacion smallint NOT NULL CHECK (calificacion BETWEEN 1 AND 10),
+    comentario varchar(500),
+    UNIQUE (periodo_evaluacion_id, matricula_id),
+    CHECK (comentario IS NULL OR length(btrim(comentario)) > 0),
+    FOREIGN KEY (periodo_evaluacion_id, seccion_id)
+        REFERENCES periodos_evaluacion(id, seccion_id) ON DELETE RESTRICT,
+    FOREIGN KEY (matricula_id, seccion_id)
+        REFERENCES matriculas(id, seccion_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE evaluaciones_docentes (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    periodo_evaluacion_id bigint NOT NULL,
+    seccion_id bigint NOT NULL,
+    asignacion_docente_id bigint NOT NULL,
+    calificacion smallint NOT NULL CHECK (calificacion BETWEEN 1 AND 10),
+    comentario varchar(1000) NOT NULL CHECK (length(btrim(comentario)) >= 20),
+    UNIQUE (periodo_evaluacion_id, asignacion_docente_id),
+    FOREIGN KEY (periodo_evaluacion_id, seccion_id)
+        REFERENCES periodos_evaluacion(id, seccion_id) ON DELETE RESTRICT,
+    FOREIGN KEY (asignacion_docente_id, seccion_id)
+        REFERENCES asignaciones_docentes(id, seccion_id) ON DELETE RESTRICT
+);
+
