@@ -1,0 +1,8 @@
+.not-found {
+  min-height: 70vh; display: flex; align-items: center; justify-content: center;
+}
+.not-found-card { text-align: center; padding: 3rem 2.5rem; max-width: 420px; }
+.escudo-grande { display: flex; justify-content: center; margin-bottom: 1rem; }
+.not-found-card h1 { font-family: var(--font-display); font-size: 3rem; color: var(--azul-marino); margin-bottom: .2rem; }
+.not-found-card h2 { font-family: var(--font-display); font-size: 1.2rem; color: var(--azul-acero); margin-bottom: .6rem; }
+.not-found-card p { color: var(--gris-piedra); margin-bottom: 1.5rem; font-size: .9rem; }

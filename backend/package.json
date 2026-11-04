@@ -1,0 +1,51 @@
+{
+  "name": "votesecure-backend",
+  "version": "0.1.0",
+  "description": "API VoteSecure: votacion electoral segura por secciones (UTP)",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/index.js",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unitarias",
+    "test:integracion": "vitest run tests/integracion",
+    "lint": "eslint .",
+    "deps:check": "depcruise src --config .dependency-cruiser.cjs --output-type err",
+    "db:aplicar": "tsx scripts/db/aplicar-sql.ts",
+    "admin:provisionar": "tsx scripts/provisionar-admin.ts",
+    "smoke": "tsx scripts/dev/verificar-flujo.ts"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "@supabase/supabase-js": "^2.48.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "nodemailer": "^6.10.0",
+    "pg": "^8.13.1",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pg": "^8.11.11",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.24.0",
+    "@typescript-eslint/parser": "^8.24.0",
+    "dependency-cruiser": "^16.8.0",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.20.0",
+    "pino-pretty": "^13.0.0",
+    "supabase": "^2.9.6",
+    "supertest": "^7.0.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^3.0.5"
+  }
+}
