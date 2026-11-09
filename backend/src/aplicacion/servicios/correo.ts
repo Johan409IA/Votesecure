@@ -1,4 +1,3 @@
-import nodemailer, { type Transporter } from 'nodemailer';
 import { logger } from '../../config/logger';
 
 export interface AdaptadorCorreo {
@@ -14,22 +13,40 @@ class AdaptadorConsola implements AdaptadorCorreo {
   }
 }
 
-class AdaptadorSmtp implements AdaptadorCorreo {
-  private transporte: Transporter;
-  constructor(url: string) {
-    this.transporte = nodemailer.createTransport(url);
-  }
+class AdaptadorResend implements AdaptadorCorreo {
+  constructor(
+    private readonly apiKey: string,
+    private readonly remitente: string
+  ) {}
+
   async enviarVerificacion(destinatario: string, enlace: string): Promise<void> {
-    await this.transporte.sendMail({
-      from: process.env.REMITENTE_CORREO ?? 'no-reply@votesecure.local',
-      to: destinatario,
-      subject: 'Verifica tu cuenta VoteSecure',
-      text: `Abre este enlace para verificar tu cuenta: ${enlace}`,
-      html: `<p>Abre este enlace para verificar tu cuenta:</p><p><a href="${enlace}">${enlace}</a></p>`
+    const respuesta = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: this.remitente,
+        to: destinatario,
+        subject: 'Verifica tu cuenta VoteSecure',
+        text: `Abre este enlace para verificar tu cuenta: ${enlace}`,
+        html: `<p>Abre este enlace para verificar tu cuenta:</p><p><a href="${enlace}">${enlace}</a></p>`
+      })
     });
+
+    if (!respuesta.ok) {
+      const errorData = await respuesta.json().catch(() => ({}));
+      throw new Error(
+        `Resend no pudo enviar el correo (HTTP ${respuesta.status}): ${JSON.stringify(errorData)}`
+      );
+    }
   }
 }
 
-export function crearAdaptadorCorreo(smtpUrl?: string): AdaptadorCorreo {
-  return smtpUrl ? new AdaptadorSmtp(smtpUrl) : new AdaptadorConsola();
+export function crearAdaptadorCorreo(
+  apiKey?: string,
+  remitente = 'seguridad@votesecureapp.com'
+): AdaptadorCorreo {
+  return apiKey ? new AdaptadorResend(apiKey, remitente) : new AdaptadorConsola();
 }

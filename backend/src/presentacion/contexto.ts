@@ -13,7 +13,7 @@ export interface ContextoApi {
 export function crearContexto(entorno: EntornoServidor): ContextoApi {
   return {
     entorno,
-    correo: crearAdaptadorCorreo(entorno.SMTP_URL),
+    correo: crearAdaptadorCorreo(entorno.RESEND_API_KEY, entorno.REMITENTE_CORREO),
     publicador: new Publicador(
       entorno.SUPABASE_URL,
       entorno.SUPABASE_SERVICE_ROLE_KEY,
