@@ -16,6 +16,7 @@ build/
 .svelte-kit/
 coverage/
 .vite/
+.vitest/
 .agents/
 .commandcode/
 .turbo/
