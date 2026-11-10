@@ -8,7 +8,7 @@ export const registerSchema = z.object({
     .min(3)
     .max(120)
     .refine((value) => value.length > 0, { message: 'El nombre es requerido' }),
-  correo: z.string().trim().toLowerCase().min(3).max(254).email(),
+  correo: z.string().trim().toLowerCase().min(3).max(254).pipe(z.email()),
   contrasena: z
     .string()
     .min(PASSWORD_LIMITS.min, { message: `Minimo ${PASSWORD_LIMITS.min} caracteres` })
@@ -16,12 +16,12 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  correo: z.string().trim().toLowerCase().email(),
+  correo: z.string().trim().toLowerCase().pipe(z.email()),
   contrasena: z.string().min(1)
 });
 
 export const verifyQuerySchema = z.object({
-  correo: z.string().trim().toLowerCase().email(),
+  correo: z.string().trim().toLowerCase().pipe(z.email()),
   token: z.string().min(10)
 });
 

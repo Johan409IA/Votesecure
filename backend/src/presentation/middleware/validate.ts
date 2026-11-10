@@ -10,7 +10,7 @@ function zodMessage(error: ZodError): string {
   );
 }
 
-export function validate<T>(schema: ZodType<T>): RequestHandler {
+export function validate<T>(schema: ZodType<T, unknown>): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       req.body = schema.parse(req.body);
@@ -25,7 +25,7 @@ export function validate<T>(schema: ZodType<T>): RequestHandler {
   };
 }
 
-export function validateData<T>(schema: ZodType<T>, data: unknown): T {
+export function validateData<T>(schema: ZodType<T, unknown>, data: unknown): T {
   try {
     return schema.parse(data);
   } catch (error) {

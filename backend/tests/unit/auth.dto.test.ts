@@ -25,6 +25,13 @@ describe('validacion de registro', () => {
     const result = registerSchema.parse({ ...base, correo: 'U20231234@UTP.EDU.PE' });
     expect(result.correo).toBe('u20231234@utp.edu.pe');
   });
+
+  // Test de regresion de la migracion a Zod 4: el trim debe ocurrir antes
+  // del check de formato del correo (mismo orden que en Zod 3).
+  it('acepta y normaliza correos con espacios', () => {
+    const result = registerSchema.parse({ ...base, correo: '  u20231234@utp.edu.pe  ' });
+    expect(result.correo).toBe('u20231234@utp.edu.pe');
+  });
 });
 
 describe('validacion de login', () => {

@@ -7,7 +7,7 @@ import { logger } from '../src/config/logger';
 
 const argsSchema = z
   .object({
-    correo: z.string().trim().toLowerCase().email(),
+    correo: z.string().trim().toLowerCase().pipe(z.email()),
     nombre: z.string().trim().min(3).max(120),
     contrasena: z.string().min(15).max(128)
   });

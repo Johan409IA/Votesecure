@@ -14,12 +14,12 @@ const serverSchema = z
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().min(1).optional()
     ),
-    REMITENTE_CORREO: z.string().trim().email().default('seguridad@votesecureapp.com')
+    REMITENTE_CORREO: z.string().trim().pipe(z.email()).default('seguridad@votesecureapp.com')
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'RESEND_API_KEY es obligatoria en produccion',
         path: ['RESEND_API_KEY']
       });
