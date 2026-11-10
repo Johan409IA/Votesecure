@@ -1,0 +1,30 @@
+import { z } from 'zod';
+import { PASSWORD_LIMITS } from '../../application/services/passwords';
+
+export const registerSchema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(3)
+    .max(120)
+    .refine((value) => value.length > 0, { message: 'El nombre es requerido' }),
+  correo: z.string().trim().toLowerCase().min(3).max(254).email(),
+  contrasena: z
+    .string()
+    .min(PASSWORD_LIMITS.min, { message: `Minimo ${PASSWORD_LIMITS.min} caracteres` })
+    .max(PASSWORD_LIMITS.max, { message: `Maximo ${PASSWORD_LIMITS.max} caracteres` })
+});
+
+export const loginSchema = z.object({
+  correo: z.string().trim().toLowerCase().email(),
+  contrasena: z.string().min(1)
+});
+
+export const verifyQuerySchema = z.object({
+  correo: z.string().trim().toLowerCase().email(),
+  token: z.string().min(10)
+});
+
+export const idParamSchema = z.object({
+  id: z.coerce.number().int().positive()
+});

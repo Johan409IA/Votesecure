@@ -1,35 +1,35 @@
-import { cargarEntornoServidor } from './config/env';
+import { loadServerEnv } from './config/env';
 import { logger } from './config/logger';
-import { crearApp } from './app';
-import { cerrarPool } from './datos/db';
-import { PlanificadorElectoral } from './aplicacion/servicios/planificador';
-import { crearContexto } from './presentacion/contexto';
+import { createApp } from './app';
+import { closePool } from './data/db';
+import { ElectionScheduler } from './application/services/scheduler';
+import { createContext } from './presentation/context';
 
 async function main(): Promise<void> {
-  const entorno = cargarEntornoServidor();
-  const contexto = crearContexto(entorno);
-  const app = crearApp(entorno, contexto);
-  const servidor = app.listen(entorno.PORT, () => {
-    logger.info(`Backend VoteSecure escuchando en el puerto ${entorno.PORT}`);
+  const env = loadServerEnv();
+  const context = createContext(env);
+  const app = createApp(env, context);
+  const server = app.listen(env.PORT, () => {
+    logger.info(`Backend VoteSecure escuchando en el puerto ${env.PORT}`);
   });
 
-  const planificador = new PlanificadorElectoral(20_000);
-  planificador.iniciar();
+  const scheduler = new ElectionScheduler(20_000);
+  scheduler.start();
 
-  let cerrando = false;
-  const cerrar = async (senal: string): Promise<void> => {
-    if (cerrando) return;
-    cerrando = true;
-    logger.info(`Senal ${senal}: cierre ordenado en curso`);
-    await planificador.detener();
-    await contexto.publicador.detener();
-    servidor.close(() => {
-      void cerrarPool().finally(() => process.exit(0));
+  let closing = false;
+  const shutdown = async (signal: string): Promise<void> => {
+    if (closing) return;
+    closing = true;
+    logger.info(`Senal ${signal}: cierre ordenado en curso`);
+    await scheduler.stop();
+    await context.publisher.stop();
+    server.close(() => {
+      void closePool().finally(() => process.exit(0));
     });
   };
 
-  process.on('SIGINT', () => void cerrar('SIGINT'));
-  process.on('SIGTERM', () => void cerrar('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
 main().catch((error) => {

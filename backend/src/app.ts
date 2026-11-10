@@ -1,13 +1,13 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import type { EntornoServidor } from './config/env';
-import { limiteGeneral } from './presentacion/middleware/limites';
-import { protegerCsrf } from './presentacion/middleware/csrf';
-import { manejarErrores } from './presentacion/middleware/errores';
-import { crearEnrutadorApi } from './presentacion/rutas/index.rutas';
-import type { ContextoApi } from './presentacion/contexto';
+import type { ServerEnv } from './config/env';
+import { generalRateLimit } from './presentation/middleware/rate-limits';
+import { csrfProtection } from './presentation/middleware/csrf';
+import { errorHandler } from './presentation/middleware/errors';
+import { createApiRouter } from './presentation/routes/index.routes';
+import type { ApiContext } from './presentation/context';
 
-export function crearApp(entorno: EntornoServidor, contexto: ContextoApi): express.Express {
+export function createApp(env: ServerEnv, context: ApiContext): express.Express {
   const app = express();
   app.disable('x-powered-by');
 
@@ -17,11 +17,11 @@ export function crearApp(entorno: EntornoServidor, contexto: ContextoApi): expre
     next();
   });
 
-  const origenPermitido = entorno.FRONTEND_URL;
+  const allowedOrigin = env.FRONTEND_URL;
   app.use((req, res, next) => {
-    const origen = req.headers.origin;
-    if (origen === origenPermitido) {
-      res.setHeader('Access-Control-Allow-Origin', origenPermitido);
+    const origin = req.headers.origin;
+    if (origin === allowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Vary', 'Origin');
     }
@@ -36,14 +36,14 @@ export function crearApp(entorno: EntornoServidor, contexto: ContextoApi): expre
 
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
-  app.use(limiteGeneral);
-  app.use(protegerCsrf);
-  app.use('/api', crearEnrutadorApi(contexto));
+  app.use(generalRateLimit);
+  app.use(csrfProtection);
+  app.use('/api', createApiRouter(context));
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'NO_ENCONTRADO', mensaje: 'Ruta no encontrada' });
   });
-  app.use(manejarErrores);
+  app.use(errorHandler);
 
   return app;
 }

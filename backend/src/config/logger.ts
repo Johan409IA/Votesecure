@@ -1,9 +1,9 @@
 import pino from 'pino';
 
-const esProduccion = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const logger = pino(
-  esProduccion
+  isProduction
     ? { level: process.env.LOG_LEVEL ?? 'info' }
     : {
         level: process.env.LOG_LEVEL ?? 'debug',

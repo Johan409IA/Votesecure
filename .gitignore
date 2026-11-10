@@ -24,6 +24,4 @@ desktop.ini
 AGENTS.md
 .idea/
 .vscode/
-AGENTS
-MEMORY
-.dependency-cruiser.cjs
+MEMORY.md

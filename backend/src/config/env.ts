@@ -1,9 +1,6 @@
-import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
-
-const esquemaServidor = z
+const serverSchema = z
   .object({
     PORT: z.coerce.number().int().positive().default(3000),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -14,13 +11,13 @@ const esquemaServidor = z
     REALTIME_CANAL_SECRETO: z.string().min(32),
     SESION_TTL_HORAS: z.coerce.number().positive().max(168).default(8),
     RESEND_API_KEY: z.preprocess(
-      (valor) => (typeof valor === 'string' && valor.trim() === '' ? undefined : valor),
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().min(1).optional()
     ),
     REMITENTE_CORREO: z.string().trim().email().default('seguridad@votesecureapp.com')
   })
-  .superRefine((entorno, ctx) => {
-    if (entorno.NODE_ENV === 'production' && !entorno.RESEND_API_KEY) {
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'RESEND_API_KEY es obligatoria en produccion',
@@ -29,16 +26,16 @@ const esquemaServidor = z
     }
   });
 
-export type EntornoServidor = z.infer<typeof esquemaServidor>;
+export type ServerEnv = z.infer<typeof serverSchema>;
 
-export function cargarEntornoServidor(): EntornoServidor {
-  return esquemaServidor.parse(process.env);
+export function loadServerEnv(): ServerEnv {
+  return serverSchema.parse(process.env);
 }
 
-export function cadenaDesdeEnv(nombre: string): string {
-  const resultado = z.string().min(1).safeParse(process.env[nombre]);
-  if (!resultado.success) {
-    throw new Error(`Variable de entorno faltante: ${nombre}`);
+export function stringFromEnv(name: string): string {
+  const result = z.string().min(1).safeParse(process.env[name]);
+  if (!result.success) {
+    throw new Error(`Variable de entorno faltante: ${name}`);
   }
-  return resultado.data;
+  return result.data;
 }
