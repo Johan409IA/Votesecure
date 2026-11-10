@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@node-rs/argon2": "2.0.2",
-    "@supabase/supabase-js": "2.48.0",
+    "@supabase/supabase-js": "2.119.0",
     "cookie-parser": "1.4.7",
     "express": "4.22.3",
     "express-rate-limit": "7.5.0",
@@ -34,7 +34,7 @@
     "@types/pg": "8.11.11",
     "@types/supertest": "6.0.2",
     "dependency-cruiser": "18.7.2",
-    "eslint": "9.20.0",
+    "eslint": "9.39.5",
     "pino-pretty": "13.0.0",
     "supabase": "2.122.1",
     "supertest": "7.3.2",
@@ -42,5 +42,8 @@
     "typescript": "5.7.3",
     "typescript-eslint": "8.24.0",
     "vitest": "3.2.7"
+  },
+  "overrides": {
+    "minimatch": "11.0.1"
   }
 }
