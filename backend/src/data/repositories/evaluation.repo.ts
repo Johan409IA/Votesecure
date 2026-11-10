@@ -5,6 +5,7 @@ export interface Delegation {
   electionId: number;
   sectionId: number;
   candidacyId: number;
+  delegateStudentId: number;
   delegateName: string;
   startsAt: Date;
   endsAt: Date | null;
@@ -16,6 +17,7 @@ export interface EvaluationPeriod {
   sectionId: number;
   opensAt: Date;
   closesAt: Date;
+  instructions: string;
 }
 
 interface DelegationRow {
@@ -23,6 +25,7 @@ interface DelegationRow {
   eleccion_id: string;
   seccion_id: string;
   candidatura_id: string;
+  estudiante_id: string;
   nombre_delegado: string;
   inicia_en: Date;
   termina_en: Date | null;
@@ -34,6 +37,7 @@ interface PeriodRow {
   seccion_id: string;
   abre_en: Date;
   cierra_en: Date;
+  instrucciones: string;
 }
 
 function mapDelegation(row: DelegationRow): Delegation {
@@ -42,24 +46,37 @@ function mapDelegation(row: DelegationRow): Delegation {
     electionId: Number(row.eleccion_id),
     sectionId: Number(row.seccion_id),
     candidacyId: Number(row.candidatura_id),
+    delegateStudentId: Number(row.estudiante_id),
     delegateName: row.nombre_delegado,
     startsAt: row.inicia_en,
     endsAt: row.termina_en
   };
 }
 
+function mapPeriod(row: PeriodRow): EvaluationPeriod {
+  return {
+    id: Number(row.id),
+    delegationId: Number(row.delegacion_id),
+    sectionId: Number(row.seccion_id),
+    opensAt: row.abre_en,
+    closesAt: row.cierra_en,
+    instructions: row.instrucciones
+  };
+}
+
+const DELEGATION_SELECT = `SELECT d.id, d.eleccion_id, d.seccion_id, d.candidatura_id,
+      m.estudiante_id, u.nombre AS nombre_delegado, d.inicia_en, d.termina_en
+   FROM delegaciones d
+   JOIN candidaturas c ON c.id = d.candidatura_id
+   JOIN matriculas m ON m.id = c.matricula_id
+   JOIN usuarios u ON u.id = m.estudiante_id`;
+
 export async function getDelegation(
   delegationId: number
 ): Promise<Delegation | null> {
   return withTransaction(async (client) => {
     const result = await client.query<DelegationRow>(
-      `SELECT d.id, d.eleccion_id, d.seccion_id, d.candidatura_id,
-              u.nombre AS nombre_delegado, d.inicia_en, d.termina_en
-       FROM delegaciones d
-       JOIN candidaturas c ON c.id = d.candidatura_id
-       JOIN matriculas m ON m.id = c.matricula_id
-       JOIN usuarios u ON u.id = m.estudiante_id
-       WHERE d.id = $1`,
+      `${DELEGATION_SELECT} WHERE d.id = $1`,
       [delegationId]
     );
     const row = result.rows[0];
@@ -72,12 +89,7 @@ export async function currentDelegationBySection(
 ): Promise<Delegation | null> {
   return withTransaction(async (client) => {
     const result = await client.query<DelegationRow>(
-      `SELECT d.id, d.eleccion_id, d.seccion_id, d.candidatura_id,
-              u.nombre AS nombre_delegado, d.inicia_en, d.termina_en
-       FROM delegaciones d
-       JOIN candidaturas c ON c.id = d.candidatura_id
-       JOIN matriculas m ON m.id = c.matricula_id
-       JOIN usuarios u ON u.id = m.estudiante_id
+      `${DELEGATION_SELECT}
        WHERE d.seccion_id = $1
          AND (d.termina_en IS NULL OR d.termina_en > now())
        ORDER BY d.inicia_en DESC
@@ -89,27 +101,37 @@ export async function currentDelegationBySection(
   });
 }
 
+const PERIOD_SELECT = `SELECT id, delegacion_id, seccion_id, abre_en, cierra_en,
+      instrucciones
+   FROM periodos_evaluacion`;
+
 export async function currentPeriodByDelegation(
   delegationId: number
 ): Promise<EvaluationPeriod | null> {
   return withTransaction(async (client) => {
     const result = await client.query<PeriodRow>(
-      `SELECT id, delegacion_id, seccion_id, abre_en, cierra_en
-       FROM periodos_evaluacion
+      `${PERIOD_SELECT}
        WHERE delegacion_id = $1 AND abre_en <= now() AND cierra_en > now()
        ORDER BY cierra_en DESC LIMIT 1`,
       [delegationId]
     );
     const row = result.rows[0];
-    return row
-      ? {
-          id: Number(row.id),
-          delegationId: Number(row.delegacion_id),
-          sectionId: Number(row.seccion_id),
-          opensAt: row.abre_en,
-          closesAt: row.cierra_en
-        }
-      : null;
+    return row ? mapPeriod(row) : null;
+  });
+}
+
+export async function latestPeriodByDelegation(
+  delegationId: number
+): Promise<EvaluationPeriod | null> {
+  return withTransaction(async (client) => {
+    const result = await client.query<PeriodRow>(
+      `${PERIOD_SELECT}
+       WHERE delegacion_id = $1
+       ORDER BY cierra_en DESC LIMIT 1`,
+      [delegationId]
+    );
+    const row = result.rows[0];
+    return row ? mapPeriod(row) : null;
   });
 }
 
@@ -191,9 +213,28 @@ export interface EvaluationSummary {
   periodId: number | null;
   studentAverage: number | null;
   totalStudentEvaluations: number;
+  studentComments: string[];
   teacherAverage: number | null;
   totalTeacherRatings: number;
   teacherComments: Array<{ grade: number; comment: string }>;
+}
+
+// §7.2: el delegado solo consulta su promedio general, nunca evaluadores
+// individuales. Media aritmetica de las evaluaciones estudiantiles (§7.1).
+export async function studentAverageByDelegation(
+  delegationId: number
+): Promise<number | null> {
+  return withTransaction(async (client) => {
+    const result = await client.query<{ promedio: string | null }>(
+      `SELECT round(avg(e.calificacion), 2) AS promedio
+       FROM evaluaciones_estudiantes e
+       JOIN periodos_evaluacion p ON p.id = e.periodo_evaluacion_id
+       WHERE p.delegacion_id = $1`,
+      [delegationId]
+    );
+    const promedio = result.rows[0]?.promedio;
+    return promedio ? Number(promedio) : null;
+  });
 }
 
 export async function summaryByDelegation(
@@ -201,8 +242,7 @@ export async function summaryByDelegation(
 ): Promise<EvaluationSummary> {
   return withTransaction(async (client) => {
     const period = await client.query<PeriodRow>(
-      `SELECT id, delegacion_id, seccion_id, abre_en, cierra_en
-       FROM periodos_evaluacion WHERE delegacion_id = $1
+      `${PERIOD_SELECT} WHERE delegacion_id = $1
        ORDER BY cierra_en DESC LIMIT 1`,
       [delegation.id]
     );
@@ -212,6 +252,12 @@ export async function summaryByDelegation(
     const students = await client.query<{ promedio: string | null; total: string }>(
       `SELECT round(avg(calificacion), 2) AS promedio, count(*) AS total
        FROM evaluaciones_estudiantes WHERE periodo_evaluacion_id = $1`,
+      [periodId]
+    );
+    const studentComments = await client.query<{ comentario: string }>(
+      `SELECT comentario FROM evaluaciones_estudiantes
+       WHERE periodo_evaluacion_id = $1 AND comentario IS NOT NULL
+       ORDER BY id`,
       [periodId]
     );
     const teachers = await client.query<{ promedio: string | null; total: string }>(
@@ -236,6 +282,7 @@ export async function summaryByDelegation(
       periodId,
       studentAverage: studentRow?.promedio ? Number(studentRow.promedio) : null,
       totalStudentEvaluations: Number(studentRow?.total ?? 0),
+      studentComments: studentComments.rows.map((row) => row.comentario),
       teacherAverage: teacherRow?.promedio ? Number(teacherRow.promedio) : null,
       totalTeacherRatings: Number(teacherRow?.total ?? 0),
       teacherComments: comments.rows.map((row) => ({

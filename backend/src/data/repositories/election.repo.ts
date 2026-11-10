@@ -423,13 +423,15 @@ export async function createEvaluationPeriod(
   delegationId: number,
   sectionId: number,
   opensAt: Date,
-  closesAt: Date
+  closesAt: Date,
+  instructions: string
 ): Promise<number> {
   return withTransaction(async (client) => {
     const result = await client.query<{ id: string }>(
-      `INSERT INTO periodos_evaluacion (delegacion_id, seccion_id, abre_en, cierra_en)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [delegationId, sectionId, opensAt, closesAt]
+      `INSERT INTO periodos_evaluacion
+         (delegacion_id, seccion_id, abre_en, cierra_en, instrucciones)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [delegationId, sectionId, opensAt, closesAt, instructions]
     );
     return Number(result.rows[0]?.id);
   });

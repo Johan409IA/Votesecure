@@ -58,7 +58,8 @@ export const delegationSchema = z.object({
 export const evaluationPeriodSchema = z.object({
   delegacionId: z.coerce.number().int().positive(),
   abreEn: z.coerce.date(),
-  cierraEn: z.coerce.date()
+  cierraEn: z.coerce.date(),
+  instrucciones: z.string().trim().min(20).max(1000)
 }).refine((data) => data.cierraEn > data.abreEn, {
   message: 'El cierre debe ser posterior a la apertura',
   path: ['cierraEn']

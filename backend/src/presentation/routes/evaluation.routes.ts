@@ -70,7 +70,8 @@ export function createEvaluationRoutes(_ctx: ApiContext): Router {
           req.user!,
           req.body.delegacionId,
           req.body.abreEn,
-          req.body.cierraEn
+          req.body.cierraEn,
+          req.body.instrucciones
         );
         res.status(201).json({ periodoId: periodId });
       } catch (error) {

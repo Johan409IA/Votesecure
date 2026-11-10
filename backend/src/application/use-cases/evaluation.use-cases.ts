@@ -12,7 +12,8 @@ export async function createEvaluationPeriod(
   user: SessionUser,
   delegationId: number,
   opensAt: Date,
-  closesAt: Date
+  closesAt: Date,
+  instructions: string
 ): Promise<number> {
   const delegation = await evaluationsRepo.getDelegation(delegationId);
   if (!delegation) throw new NotFoundError('Delegacion no encontrada');
@@ -21,7 +22,8 @@ export async function createEvaluationPeriod(
     delegation.id,
     delegation.sectionId,
     opensAt,
-    closesAt
+    closesAt,
+    instructions
   );
 }
 
@@ -32,7 +34,23 @@ export async function viewDelegate(user: SessionUser, sectionId: number) {
   const delegation = await evaluationsRepo.currentDelegationBySection(sectionId);
   if (!delegation) throw new NotFoundError('No hay delegado vigente en la seccion');
   const period = await evaluationsRepo.currentPeriodByDelegation(delegation.id);
-  return { delegacion: delegation, periodoAbierto: period };
+  const response: {
+    delegacion: evaluationsRepo.Delegation;
+    periodoAbierto: evaluationsRepo.EvaluationPeriod | null;
+    promedioDelegado?: number | null;
+  } = { delegacion: delegation, periodoAbierto: period };
+
+  // §7.2: el delegado solo ve su promedio general cuando el periodo ha
+  // concluido formalmente; jamas evaluadores individuales.
+  if (user.id === delegation.delegateStudentId) {
+    const latest = await evaluationsRepo.latestPeriodByDelegation(delegation.id);
+    if (latest && latest.closesAt.getTime() <= Date.now()) {
+      response.promedioDelegado = await evaluationsRepo.studentAverageByDelegation(
+        delegation.id
+      );
+    }
+  }
+  return response;
 }
 
 export async function evaluateDelegate(
