@@ -1,8 +1,9 @@
-import { NotFoundError, ForbiddenError } from '../../shared/errors';
+import { NotFoundError, ForbiddenError, BusinessError } from '../../shared/errors';
 import * as electionsRepo from '../../data/repositories/election.repo';
 import {
   isSectionMember,
-  getFinalResult
+  getFinalResult,
+  listTiedCandidates
 } from '../../data/repositories/result.repo';
 import { listEnrollmentsByStudent } from '../../data/repositories/academic.repo';
 import type { ResultsPublisher } from '../services/realtime';
@@ -18,7 +19,36 @@ export async function createElection(
   data: Omit<electionsRepo.NewElectionData, 'createdByUserId'>
 ): Promise<electionsRepo.Election> {
   await requireCanManageSection(user, data.sectionId);
+  if (data.type === 'desempate') {
+    return createTiebreakElection(user, data);
+  }
   return electionsRepo.createElection({ ...data, createdByUserId: user.id });
+}
+
+// §6.2 "Iniciar Desempate": la eleccion derivada se crea con las
+// candidaturas de los candidatos empatados en primer lugar, ya cargadas.
+async function createTiebreakElection(
+  user: SessionUser,
+  data: Omit<electionsRepo.NewElectionData, 'createdByUserId'>
+): Promise<electionsRepo.Election> {
+  const originId = data.originElectionId;
+  if (!originId) {
+    throw new BusinessError('El desempate requiere una eleccion de origen');
+  }
+  const origin = await electionsRepo.getElection(originId);
+  if (!origin) throw new NotFoundError('Eleccion de origen no encontrada');
+  const result = await getFinalResult(originId);
+  if (!result || result.situation !== 'empate') {
+    throw new BusinessError(
+      'El desempate requiere una eleccion de origen cerrada con empate positivo'
+    );
+  }
+  const tied = await listTiedCandidates(originId);
+  return electionsRepo.createElection({
+    ...data,
+    createdByUserId: user.id,
+    candidacyEnrollmentIds: tied.map((candidate) => candidate.enrollmentId)
+  });
 }
 
 export async function getElection(id: number) {

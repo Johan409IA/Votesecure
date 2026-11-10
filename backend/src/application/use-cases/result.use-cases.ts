@@ -12,6 +12,22 @@ export async function isSectionMember(
   return resultsRepo.isSectionMember(userId, sectionId);
 }
 
+// §5.1: en vivo acceden el estudiante habilitado, el docente asignado a la
+// seccion (proyector de aula) y el administrador. Los no miembros, no.
+async function canViewLiveResults(
+  user: SessionUser,
+  election: { id: number; sectionId: number }
+): Promise<boolean> {
+  if (isAdmin(user)) return true;
+  if (user.type === 'docente') {
+    return resultsRepo.isTeacherOfSection(user.id, election.sectionId);
+  }
+  if (user.type === 'estudiante') {
+    return resultsRepo.isEligible(election.id, user.id);
+  }
+  return false;
+}
+
 export async function getResults(
   user: SessionUser,
   electionId: number
@@ -20,20 +36,20 @@ export async function getResults(
   if (!election) throw new NotFoundError('Eleccion no encontrada');
 
   if (election.status === 'activa') {
-    if (user.type !== 'estudiante') {
-      throw new ForbiddenError('Los resultados en vivo son solo para estudiantes habilitados');
-    }
-    const eligible = await resultsRepo.isEligible(electionId, user.id);
-    if (!eligible) {
-      throw new ForbiddenError('No estas habilitado en esta eleccion');
+    const allowed = await canViewLiveResults(user, election);
+    if (!allowed) {
+      throw new ForbiddenError('No tienes acceso a los resultados en vivo de esta eleccion');
     }
     const load = await buildResultLoad(electionId);
     if (!load) throw new NotFoundError('Eleccion no encontrada');
-    return {
-      tipo: 'en_vivo' as const,
-      ...load,
-      yaVoto: await resultsRepo.hasVoted(electionId, user.id)
-    };
+    if (user.type === 'estudiante') {
+      return {
+        tipo: 'en_vivo' as const,
+        ...load,
+        yaVoto: await resultsRepo.hasVoted(electionId, user.id)
+      };
+    }
+    return { tipo: 'en_vivo' as const, ...load };
   }
 
   if (election.status === 'cerrada') {
@@ -55,18 +71,15 @@ export async function subscriptionTicket(
   user: SessionUser,
   publisher: ResultsPublisher,
   electionId: number
-): Promise<{ canal: string; eleccionId: number }> {
+): Promise<{ canal: string; expiraEn: number }> {
   const election = await electionsRepo.getElection(electionId);
   if (!election) throw new NotFoundError('Eleccion no encontrada');
   if (election.status !== 'activa') {
     throw new ForbiddenError('La eleccion no esta activa');
   }
-  if (user.type !== 'estudiante') {
-    throw new ForbiddenError('Solo los estudiantes habilitados pueden suscribirse');
+  const allowed = await canViewLiveResults(user, election);
+  if (!allowed) {
+    throw new ForbiddenError('No tienes acceso a los resultados en vivo de esta eleccion');
   }
-  const eligible = await resultsRepo.isEligible(electionId, user.id);
-  if (!eligible) {
-    throw new ForbiddenError('No estas habilitado en esta eleccion');
-  }
-  return { canal: publisher.channelName(electionId), eleccionId: electionId };
+  return publisher.subscription(electionId);
 }

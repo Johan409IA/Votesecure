@@ -142,3 +142,36 @@ export async function isSectionMember(
     return result.rows.some((row) => row.existe === true);
   });
 }
+
+export interface TiedCandidate {
+  enrollmentId: number;
+  name: string;
+}
+
+// Candidatos empatados en primer lugar de la eleccion origen (§6.2): los que
+// obtuvieron el maximo de votos en la instantanea publicada.
+export async function listTiedCandidates(
+  originElectionId: number
+): Promise<TiedCandidate[]> {
+  return withTransaction(async (client) => {
+    const result = await client.query<{ matricula_id: string; nombre: string }>(
+      `WITH maximo AS (
+         SELECT max(votos_obtenidos) AS votos
+           FROM resultados_candidatos WHERE eleccion_id = $1
+       )
+       SELECT c.matricula_id, u.nombre
+       FROM resultados_candidatos r
+       JOIN candidaturas c ON c.id = r.candidatura_id
+       JOIN matriculas m ON m.id = c.matricula_id
+       JOIN usuarios u ON u.id = m.estudiante_id
+       WHERE r.eleccion_id = $1
+         AND r.votos_obtenidos = (SELECT votos FROM maximo)
+       ORDER BY u.nombre`,
+      [originElectionId]
+    );
+    return result.rows.map((row) => ({
+      enrollmentId: Number(row.matricula_id),
+      name: row.nombre
+    }));
+  });
+}

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PASSWORD_LIMITS } from '../../application/services/passwords';
+import { deriveUserTypeFromEmail } from '../../application/services/roles';
 
 export const registerSchema = z.object({
   nombre: z
@@ -8,7 +9,17 @@ export const registerSchema = z.object({
     .min(3)
     .max(120)
     .refine((value) => value.length > 0, { message: 'El nombre es requerido' }),
-  correo: z.string().trim().toLowerCase().min(3).max(254).pipe(z.email()),
+  correo: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3)
+    .max(254)
+    .pipe(z.email())
+    .refine((value) => deriveUserTypeFromEmail(value) !== null, {
+      message:
+        'El correo debe ser institucional UTP: estudiante (u...@utp.edu.pe) o docente (c...@utp.edu.pe)'
+    }),
   contrasena: z
     .string()
     .min(PASSWORD_LIMITS.min, { message: `Minimo ${PASSWORD_LIMITS.min} caracteres` })

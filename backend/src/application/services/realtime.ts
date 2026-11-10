@@ -17,10 +17,21 @@ export interface ResultLoad {
   candidaturas: Array<{ candidaturaId: number; nombre: string; votos: number }>;
 }
 
+// §5.1: el ticket del canal es efímero, con vigencia de 60 s. La "ventana"
+// es el minuto unix actual: el ticket de la ventana expira al comenzar la
+// siguiente, de modo que todos los tickets emitidos en el mismo minuto
+// derivan el mismo canal.
+const WINDOW_SECONDS = 60;
+
+function windowIndex(now: number): number {
+  return Math.floor(now / 1000 / WINDOW_SECONDS);
+}
+
 export class ResultsPublisher {
   private client: SupabaseClient;
   private channels = new Map<string, RealtimeChannel>();
   private subscribed = new Set<string>();
+  private channelWindows = new Map<string, number>();
 
   constructor(
     url: string,
@@ -32,26 +43,56 @@ export class ResultsPublisher {
     });
   }
 
-  ticket(electionId: number): string {
+  ticketFor(electionId: number, expUnix: number): string {
     return createHmac('sha256', this.secret)
-      .update(`eleccion:${electionId}`)
+      .update(`eleccion:${electionId}:exp:${expUnix}`)
       .digest('hex');
   }
 
-  channelName(electionId: number): string {
-    return `resultados:${electionId}:${this.ticket(electionId)}`;
+  ticket(electionId: number, now: number = Date.now()): string {
+    const expUnix = (windowIndex(now) + 1) * WINDOW_SECONDS;
+    return this.ticketFor(electionId, expUnix);
   }
 
+  channelName(electionId: number, now: number = Date.now()): string {
+    return `resultados:${electionId}:${this.ticket(electionId, now)}`;
+  }
+
+  // Ticket y canal de la ventana actual, en una sola llamada para que ambos
+  // correspondan siempre al mismo minuto.
+  subscription(
+    electionId: number,
+    now: number = Date.now()
+  ): { canal: string; expiraEn: number } {
+    const index = windowIndex(now);
+    const expiraEn = (index + 1) * WINDOW_SECONDS;
+    return {
+      canal: `resultados:${electionId}:${this.ticketFor(electionId, expiraEn)}`,
+      expiraEn
+    };
+  }
+
+  // Publica en los canales de la ventana actual y la anterior: los
+  // suscriptores en vuelo no pierden eventos al rotar el ticket.
   async publish(electionId: number, load: ResultLoad): Promise<void> {
-    const channel = await this.getChannel(electionId);
-    const status = await channel.send({
-      type: 'broadcast',
-      event: 'resultado',
-      payload: load
-    });
-    if (status !== 'ok') {
-      throw new Error(`Realtime rechazo la publicacion: ${status}`);
+    const current = windowIndex(Date.now());
+    const windows = current > 0 ? [current, current - 1] : [current];
+    const liveNames = new Set<string>();
+    for (const index of windows) {
+      const expiraEn = (index + 1) * WINDOW_SECONDS;
+      const name = `resultados:${electionId}:${this.ticketFor(electionId, expiraEn)}`;
+      liveNames.add(name);
+      const channel = await this.getChannel(name, index);
+      const status = await channel.send({
+        type: 'broadcast',
+        event: 'resultado',
+        payload: load
+      });
+      if (status !== 'ok') {
+        throw new Error(`Realtime rechazo la publicacion: ${status}`);
+      }
     }
+    await this.pruneChannels(electionId, current);
   }
 
   async stop(): Promise<void> {
@@ -60,16 +101,42 @@ export class ResultsPublisher {
     }
     this.channels.clear();
     this.subscribed.clear();
+    this.channelWindows.clear();
   }
 
-  private async getChannel(electionId: number): Promise<RealtimeChannel> {
-    const name = this.channelName(electionId);
+  // Retira los canales de ventanas ya vencidas de esta eleccion.
+  private async pruneChannels(
+    electionId: number,
+    currentIndex: number
+  ): Promise<void> {
+    const prefix = `resultados:${electionId}:`;
+    for (const [name, channel] of this.channels) {
+      const index = this.channelWindows.get(name);
+      if (
+        name.startsWith(prefix) &&
+        index !== undefined &&
+        index < currentIndex - 1
+      ) {
+        await this.client.removeChannel(channel);
+        this.channels.delete(name);
+        this.subscribed.delete(name);
+        this.channelWindows.delete(name);
+        logger.debug({ channel: name }, 'Canal Realtime retirado por ventana vencida');
+      }
+    }
+  }
+
+  private async getChannel(
+    name: string,
+    windowIndexValue: number
+  ): Promise<RealtimeChannel> {
     let channel = this.channels.get(name);
     if (!channel) {
       channel = this.client.channel(name, {
         config: { broadcast: { self: false } }
       });
       this.channels.set(name, channel);
+      this.channelWindows.set(name, windowIndexValue);
     }
     if (!this.subscribed.has(name)) {
       await new Promise<void>((resolve, reject) => {

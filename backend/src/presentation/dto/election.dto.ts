@@ -19,6 +19,15 @@ export const createElectionSchema = z.object({
     (data.tipo === undefined && data.eleccionOrigenId === undefined) ||
     (data.tipo !== undefined && data.eleccionOrigenId !== undefined),
   { message: 'Las elecciones derivadas requieren tipo y eleccion de origen' }
+).refine(
+  // §6.2: la ventana del balotaje es corta, de 15 a 30 minutos.
+  (data) => {
+    if (data.tipo !== 'desempate') return true;
+    const duracionMinutos =
+      (data.cierraEn.getTime() - data.iniciaEn.getTime()) / 60_000;
+    return duracionMinutos >= 15 && duracionMinutos <= 30;
+  },
+  { message: 'El desempate debe durar entre 15 y 30 minutos', path: ['cierraEn'] }
 );
 
 export const updateElectionSchema = z

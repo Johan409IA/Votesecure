@@ -80,6 +80,9 @@ export interface NewElectionData {
   createdByUserId: number;
   type?: 'principal' | 'desempate' | 'repeticion';
   originElectionId?: number;
+  // Desempate asistido (§6.2): candidaturas a crear junto con la eleccion,
+  // en la misma transaccion.
+  candidacyEnrollmentIds?: number[];
 }
 
 export async function createElection(
@@ -102,7 +105,15 @@ export async function createElection(
         data.createdByUserId
       ]
     );
-    return mapElection(result.rows[0]!);
+    const election = mapElection(result.rows[0]!);
+    for (const enrollmentId of data.candidacyEnrollmentIds ?? []) {
+      await client.query(
+        `INSERT INTO candidaturas (eleccion_id, seccion_id, matricula_id)
+         VALUES ($1, $2, $3)`,
+        [election.id, election.sectionId, enrollmentId]
+      );
+    }
+    return election;
   });
 }
 

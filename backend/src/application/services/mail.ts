@@ -45,8 +45,14 @@ class ResendMailAdapter implements MailAdapter {
 }
 
 export function createMailAdapter(
-  apiKey?: string,
-  sender = 'seguridad@votesecureapp.com'
+  apiKey: string | undefined,
+  sender = 'seguridad@votesecureapp.com',
+  nodeEnv = 'development'
 ): MailAdapter {
-  return apiKey ? new ResendMailAdapter(apiKey, sender) : new ConsoleMailAdapter();
+  // Bypass de desarrollo (§2.1): fuera de produccion se registra el enlace en
+  // el log aunque exista RESEND_API_KEY, para que smoke y pruebas nunca
+  // envien correos reales.
+  return nodeEnv === 'production' && apiKey
+    ? new ResendMailAdapter(apiKey, sender)
+    : new ConsoleMailAdapter();
 }

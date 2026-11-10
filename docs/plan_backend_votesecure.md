@@ -33,7 +33,7 @@ Todo el renombrado se ejecuta en la **Fase 0**; las fases 1–10 ya citan archiv
 | 3 | Falta `POST /api/secciones/unirse` por código `SEC-XXXX` (§3.1) y el código no se auto-genera (lo exige el DTO del cliente) | `elecciones.dto.ts:61` (`codigo` requerido), `secciones.rutas.ts` |
 | 4 | Resultados en vivo y ticket de suscripción restringidos a estudiantes; el doc §5.1 exige acceso también para docente (proyector) y admin | `resultados.casos.ts:23-32, 60-66` |
 | 5 | Ticket HMAC estático (sin vigencia); el doc §5.1 exige ticket efímero de 60 s | `realtime.ts:33-41` |
-| 6 | Desempate: el trigger valida el empate, pero falta asistencia "Iniciar Desempate" (auto-cargar candidatos empatados, ventana 15–30 min) y la validación de que las candidaturas de la derivada sean solo las empatadas | `electoral.casos.ts:14`, `sql/001:369-452` |
+| 6 | Desempate: el trigger valida el empate, pero falta asistencia "Iniciar Desempate" (auto-cargar candidatos empatados, ventana 15–30 min). La validación de que las candidaturas de la derivada sean solo las empatadas ya existe (`controlar_configuracion_electoral` + `activar_eleccion`) | `electoral.casos.ts:14`, `sql/001:369-452,501-513,688-700` |
 | 7 | Correo por nodemailer/SMTP; el doc §2.1 fija Resend con remitente `seguridad@votesecureapp.com` | `correo.ts` |
 | 8 | Registro sin validación de regex UTP por rol (§2.1) | `auth.dto.ts:11` (solo `.email()`) |
 | 9 | `periodos_evaluacion` sin columna `instrucciones` (§7.1 exige instrucciones/criterios del docente) | `sql/001:191-201` |
@@ -111,15 +111,15 @@ Archivos: `result.use-cases.ts`, `realtime.ts`, `election.routes.ts`
 3. El frontend deberá invocar el POST y suscribirse antes de `expiraEn` (contrato a documentar; frontend fuera de alcance).
 
 ### Fase 4 — Desempate asistido de un clic (§6.2)
-Archivos: `election.use-cases.ts`, `election.dto.ts`, `result.repo.ts`, `sql/001_esquema_oficial.sql` (patch con aprobación)
+Archivos: `election.use-cases.ts`, `election.dto.ts`, `result.repo.ts`, `election.repo.ts`
 1. En `createElection`, cuando `tipo='desempate'`:
-   - Validar ventana `cierraEn - iniciaEn` entre 15 y 30 minutos (regla de negocio en Zod/caso).
-   - Auto-insertar las candidaturas de los candidatos empatados en primer lugar (leer `resultados_candidatos` de la elección origen vía `resultsRepo`) — esto materializa el botón "Iniciar Desempate".
-2. **Cambio SQL** (presentar el patch al usuario como DBA antes de aplicar — taste: el usuario aprueba el SQL): reforzar `controlar_configuracion_electoral` (o `controlar_eleccion`) para que las candidaturas de una elección `desempate` sean subconjunto exacto de los candidatos con `votos_obtenidos = max` en la origen. Aplicar vía `npm run db:aplicar` tras aprobación.
+   - Validar ventana `cierraEn - iniciaEn` entre 15 y 30 minutos (regla de negocio en Zod).
+   - Auto-insertar las candidaturas de los candidatos empatados en primer lugar (leer `resultados_candidatos` de la elección origen vía `resultsRepo`, en la misma transacción de creación) — esto materializa el botón "Iniciar Desempate". Pre-chequeo de negocio: la origen debe estar publicada con situación `empate` (422 `NEGOCIO`).
+2. **Cambio SQL — innecesario (verificado nov 2026):** el subconjunto exacto de candidatos empatados ya está reforzado en `001_esquema_oficial.sql`: `controlar_configuracion_electoral` exige por fila que cada candidatura de un `desempate` corresponda a un candidato con `votos_obtenidos = max` en la origen (líneas 501-513), y `activar_eleccion` exige que el conteo de candidaturas sea igual al de candidatos empatados (líneas 688-700), lo que fija el conjunto exacto. No se requiere patch ni aprobación de DBA.
 
 ### Fase 5 — Correo con Resend (§2.1)
 
-> Estado (nov 2026): implementado con `fetch` nativo de Node.js contra `POST https://api.resend.com/emails`, sin dependencias nuevas; se descartaron nodemailer y el SDK npm de Resend (arrastra React/peer-deps).
+> Estado (nov 2026): **completada.** Implementada con `fetch` nativo de Node.js contra `POST https://api.resend.com/emails`, sin dependencias nuevas; se descartaron nodemailer y el SDK npm de Resend (arrastra React/peer-deps) y se retiró `SMTP_URL`. Bypass de desarrollo aplicado: `ResendMailAdapter` solo se usa con `NODE_ENV=production` + `RESEND_API_KEY`; en development/test se loguea el enlace (adaptador consola), de modo que `npm run smoke` y las pruebas nunca envían correos reales. Flujo de token verificado: `randomBytes(32)` (base64url), solo SHA-256 (32 bytes) en `verificacion_hash`, expiración 24 h en `verificacion_expira_en`. Variables `RESEND_API_KEY` y `REMITENTE_CORREO` en `env.ts` y `.env.example` con origen comentado; dominio `votesecureapp.com` (DNS en Cloudflare) verificado en Resend para SPF/DKIM/DMARC.
 Archivos: `mail.ts`, `config/env.ts`, `.env.example`, `package.json`
 1. Comparativa corta de opciones:
    1. **HTTP API de Resend con `fetch` nativo (recomendada):** cero dependencias nuevas, misma interfaz `MailAdapter`, alineada con §9.1 (versiones fijas).
@@ -130,6 +130,8 @@ Archivos: `mail.ts`, `config/env.ts`, `.env.example`, `package.json`
 4. Variables: añadir `RESEND_API_KEY` y `REMITENTE_CORREO` a `env.ts`, `.env.example` y `.env` con placeholders comentados (taste: template claro con origen de cada valor); retirar `SMTP_URL`.
 
 ### Fase 6 — Registro con regex UTP por rol (§2.1)
+
+> Estado (nov 2026): **completada.** La derivación de `tipo_usuario` del prefijo (`deriveUserTypeFromEmail` en `roles.ts`, con los regex del doc) ya existía en `registerUser`; se añadió la validación en `registerSchema` (400 `VALIDACION` reutilizando el mismo `deriveUserTypeFromEmail`, sin duplicar regex). Registro de administrador imposible: `deriveUserTypeFromEmail` solo devuelve estudiante/docente y `crear_usuario` lo bloquea en SQL.
 Archivos: `auth.dto.ts`, `auth.use-cases.ts`, tests
 1. Validar correo en `registerSchema` con los regex del doc: `^u[a-z0-9._%+-]*@utp[.]edu[.]pe$` (estudiante), `^c[a-z0-9._%+-]*@utp[.]edu[.]pe$` (docente); derivar `tipo_usuario` del prefijo. El registro de administrador queda imposible (ya bloqueado en `crear_usuario`).
 
@@ -163,7 +165,7 @@ Archivos: `sql/001_esquema_oficial.sql` (patch), `evaluation.dto.ts`, `evaluatio
 - `backend/src/application/services/{realtime,mail}.ts`
 - `backend/src/data/repositories/{academic,result,evaluation}.repo.ts`
 - `backend/src/presentation/dto/{auth,election,evaluation}.dto.ts`
-- `backend/sql/001_esquema_oficial.sql` (patchs de Fases 4 y 7 — con aprobación del usuario como DBA)
+- `backend/sql/001_esquema_oficial.sql` (patch de la Fase 7 — con aprobación del usuario como DBA; la Fase 4 no necesita SQL)
 - `backend/package.json`, `backend/.env.example`, `backend/src/config/env.ts`
 - `backend/tests/**`, `backend/scripts/dev/verify-flow.ts`
 
@@ -178,4 +180,4 @@ Archivos: `sql/001_esquema_oficial.sql` (patch), `evaluation.dto.ts`, `evaluatio
 - Las rutas extra del código actual se conservan como complementarias (las reglas §3.2 las requieren); la matriz §10 se cumple literalmente.
 - `periodos_evaluacion` sigue siendo un periodo único por delegación (`UNIQUE(delegacion_id)`); "semana 8 o semana 16" se interpreta como discrecionalidad de cuándo abrirlo, no como periodos múltiples.
 - La ventana del balotaje se valida en la capa de aplicación; el trigger SQL solo valida el empate y el subconjunto de candidatos.
-- Ejecución continua end-to-end sin aprobaciones por fase, excepto los dos patchs SQL que se presentan al usuario (autoridad DBA) antes de aplicar.
+- Ejecución continua end-to-end sin aprobaciones por fase, excepto el patch SQL de la Fase 7 que se presenta al usuario (autoridad DBA) antes de aplicar.
