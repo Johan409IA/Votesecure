@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createAuthRoutes } from './auth.routes';
+import { createUserRoutes } from './user.routes';
 import { createSectionRoutes } from './section.routes';
 import { createElectionRoutes } from './election.routes';
 import { createResultRoutes } from './result.routes';
@@ -15,6 +16,7 @@ export function createApiRouter(ctx: ApiContext): Router {
   });
 
   router.use(createAuthRoutes(ctx));
+  router.use(createUserRoutes(ctx));
   router.use(createSectionRoutes(ctx));
   router.use(createElectionRoutes(ctx));
   router.use(createResultRoutes(ctx));

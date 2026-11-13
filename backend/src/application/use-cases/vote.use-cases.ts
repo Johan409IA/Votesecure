@@ -1,5 +1,6 @@
 import { ForbiddenError } from '../../shared/errors';
 import { logger } from '../../config/logger';
+import type { TxClient } from '../../data/db';
 import * as votesRepo from '../../data/repositories/vote.repo';
 import * as electionsRepo from '../../data/repositories/election.repo';
 import type { ResultsPublisher, ResultLoad } from '../services/realtime';
@@ -36,14 +37,15 @@ export async function castVote(
 }
 
 export async function buildResultLoad(
-  electionId: number
+  electionId: number,
+  tx?: TxClient
 ): Promise<ResultLoad | null> {
-  const election = await electionsRepo.getElection(electionId);
+  const election = await electionsRepo.getElection(electionId, tx);
   if (!election) return null;
   const [count, participation, candidacies] = await Promise.all([
-    votesRepo.countVotesByCandidacy(electionId),
-    votesRepo.electionParticipation(electionId),
-    electionsRepo.listCandidacies(electionId)
+    votesRepo.countVotesByCandidacy(electionId, tx),
+    votesRepo.electionParticipation(electionId, tx),
+    electionsRepo.listCandidacies(electionId, tx)
   ]);
   const names = new Map(
     candidacies.map((candidacy) => [candidacy.id, candidacy.studentName] as const)

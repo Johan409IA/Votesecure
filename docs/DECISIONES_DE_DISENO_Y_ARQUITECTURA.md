@@ -35,7 +35,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
   - **Acreditación en Producción:** Integración con **Resend** (API/SMTP) bajo el dominio propio verificado **`votesecureapp.com`** (gestionado en Cloudflare con firmas DNS SPF, DKIM y DMARC). Se despacha un correo con remitente personalizado institucional (`seguridad@votesecureapp.com`) conteniendo un token unívoco de 32 bytes criptográficamente seguros (`crypto.randomBytes(32)`).
   - En la base de datos se almacena únicamente el hash SHA-256 en `verificacion_hash` con fecha de caducidad de 24 horas (`verificacion_expira_en`).
   - **Acreditación en Desarrollo Local (`NODE_ENV === 'development'`):** Se activa un bypass controlado que expone el enlace de confirmación directamente en la consola/log del backend, permitiendo pruebas automatizadas y locales sin dependencias de red externas.
-  - **Aprovisionamiento Administrativo:** La función de base de datos `crear_usuario` lanza una excepción bloqueante si `tipo_usuario = 'administrador'`. Los administradores se generan exclusivamente mediante el script CLI `scripts/provisionar-admin.ts` ejecutado con el rol de PostgreSQL privilegiado `votesecure_provisionamiento`.
+  - **Aprovisionamiento Administrativo:** La función de base de datos `crear_usuario` lanza una excepción bloqueante si `tipo_usuario = 'administrador'`. Los administradores se generan exclusivamente mediante el script CLI `scripts/provision-admin.ts` ejecutado con el rol de PostgreSQL privilegiado `votesecure_provisionamiento`.
 
 ### 2.2. Política de Contraseñas, Sesiones y CSRF
 * **Requisito Aprobado:**
@@ -46,7 +46,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
   - **Algoritmo de Hash:** **Argon2id** (`@node-rs/argon2`) con un mínimo de 16 bytes de salt aleatorio. Queda prohibido el almacenamiento en texto plano o con algoritmos obsoletos (MD5, SHA1, SHA256 simple).
   - **Almacenamiento de Sesión:** Cookies `HttpOnly; SameSite=Lax; Secure` (en producción) con un TTL parametrizado (ej. 12 horas). La base de datos almacena exclusivamente el hash SHA-256 del token en `sesion_hash`.
   - **Revocación Inmediata:** Cada petición autenticada valida en base de datos que `sesion_revocada_en IS NULL` y que `sesion_expira_en > clock_timestamp()`. El endpoint `POST /api/auth/logout` o la desactivación del usuario escribe `sesion_revocada_en = clock_timestamp()`, anulando el token en el acto.
-  - **Protección CSRF Vinculada:** Se emplea el patrón *Double-Submit Cookie / Header* criptográficamente robusto: el token CSRF está derivado de la sesión y se envía como cabecera `X-CSRF-Token` en métodos mutantes (`POST`, `PUT`, `DELETE`). Adicionalmente, el middleware valida la coincidencia de las cabeceras `Origin` y `Referer` contra la URL autorizada del frontend.
+  - **Protección CSRF Vinculada:** Se emplea el patrón *Double-Submit Cookie / Header* criptográficamente robusto: el token CSRF está derivado de la sesión y se envía como cabecera `X-CSRF-Token` en métodos mutantes (`POST`, `PUT`, `DELETE`). Adicionalmente, el middleware valida que la cabecera `Origin` (cuando el navegador la envía) coincida con la URL autorizada del frontend (`FRONTEND_URL`); `Referer` no se exige porque la API responde con `Referrer-Policy: no-referrer` y los navegadores no la envían.
 
 ---
 
@@ -57,7 +57,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
   - El docente no necesita cargar archivos manuales complejos durante la clase; crea su curso/sección en la plataforma y comparte un código de acceso corto legible.
   - Los estudiantes presentes ingresan el código desde sus dispositivos para enrolarse inmediatamente en la sección.
 * **Decisión Técnica Adoptada:**
-  - Al crear una sección, se auto-genera un código alfanumérico único de 6 caracteres legibles en mayúsculas (ej. `SEC-8K2A`).
+  - Al crear una sección, se auto-genera un código único en formato `SEC-XXXX` (prefijo `SEC-` más 4 caracteres `A–Z` y `2–9`, excluyendo los ambiguos `0/O/1/I/L`), legible en mayúsculas (ej. `SEC-8K2A`).
   - El estudiante utiliza el endpoint `POST /api/secciones/unirse` enviando `{ codigo: "SEC-8K2A" }`, lo que genera su registro en la tabla `matriculas`.
   - El docente dispone de una opción de **"Bloquear inscripciones"** (`activa = false` para nuevas matrículas) previo a la elección para evitar que usuarios ajenos a la clase ingresen a destiempo.
 
@@ -107,7 +107,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
   - **Actualización reactiva:** El conteo agregado se actualiza inmediatamente tras registrarse cada voto.
   - **Prohibición de proclamación preliminar:** Mientras la elección esté en estado `activa`, la pantalla debe incluir un banner reglamentario visible: *"El cómputo en vivo es parcial e informativo. Ningún candidato es proclamado ganador hasta el cierre formal y publicación de actas"*.
 * **Decisión Técnica Adoptada:**
-  - **Supabase Realtime Broadcast:** El backend utiliza la clase `PublicadorResultados` (`@supabase/supabase-js`) para enviar el payload agregado al canal `resultados:{eleccionId}:{hmacTicket}`.
+  - **Supabase Realtime Broadcast:** El backend utiliza la clase `ResultsPublisher` (`@supabase/supabase-js`, módulo `application/services/realtime.ts`) para enviar el payload agregado al canal `resultados:{eleccionId}:{hmacTicket}`.
   - La función privilegiada de base de datos `contar_votos_eleccion(p_eleccion_id)` computa los agregados por candidatura mediante `GROUP BY` sobre `candidaturas` sin que la API lea votos individuales.
   - **Autorización del Canal:** Para suscribirse al canal en el frontend, el cliente invoca `POST /api/resultados/:id/suscripcion`. El backend verifica que el usuario pertenezca a la sección y genera un ticket efímero firmado por HMAC con vigencia de 60 segundos.
   - El payload en vivo solo contiene:
@@ -154,7 +154,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
 * **Requisito Aprobado:**
   - Un delegado solo puede proclamarse si existe un único ganador definitivo derivado de una elección cerrada con situación `'ganador'`.
 * **Decisión Técnica Adoptada:**
-  - La función `proclamarDelegado` en `electoral.casos.ts` exige que `resultado.situacion === 'ganador'` y registra la fila en la tabla `delegaciones` ligando la elección, la sección y la candidatura ganadora, con vigencia para el ciclo académico correspondiente.
+  - La función `proclaimDelegate` en `application/use-cases/election.use-cases.ts` exige que `resultado.situacion === 'ganador'` y registra la fila en la tabla `delegaciones` ligando la elección, la sección y la candidatura ganadora, con vigencia para el ciclo académico correspondiente.
 
 ---
 
@@ -163,7 +163,7 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
 ### 7.1. Reglas y Restricciones de Calificación
 * **Requisito Aprobado:**
   - El módulo de evaluación solo puede abrirse después de que exista un delegado electo proclamado en la sección.
-  - La apertura es manual y discrecional por parte del docente (ej. semana 8 o semana 16 del ciclo), quien fija la fecha límite e instrucciones/criterios específicos.
+  - La apertura es manual y discrecional por parte del docente responsable, quien puede abrir **hasta 3 periodos de evaluación por ciclo** (ej. semanas 6, 12 y 16), fijando en cada uno la ventana y las instrucciones/criterios específicos. Los periodos de una misma delegación no pueden solaparse.
   - **Escala de calificación:** Números enteros del 1 al 10.
   - **Comentarios:**
     - Estudiantes: Comentario opcional de hasta 500 caracteres.
@@ -171,15 +171,16 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
   - Una vez vencida la fecha de cierre del periodo, el formulario se bloquea automáticamente.
 * **Decisión Técnica Adoptada:**
   - Se modelan las tablas `periodos_evaluacion`, `evaluaciones_estudiantes` y `evaluaciones_docentes`.
-  - Las evaluaciones de estudiantes aseguran el principio de voto único mediante `UNIQUE (periodo_evaluacion_id, matricula_id)`.
-  - El cálculo del promedio estudiantil es la media aritmética `ROUND(AVG(calificacion), 2)`.
+  - Se permiten **hasta 3 periodos por delegación y ciclo**, reforzado en la base de datos por el trigger `controlar_periodo_evaluacion` (migración `007_periodos_evaluacion_multiples.sql`), que además prohíbe el solapamiento de ventanas de una misma delegación.
+  - Las evaluaciones de estudiantes y docentes aseguran el envío único **por periodo** mediante `UNIQUE (periodo_evaluacion_id, matricula_id)` y `UNIQUE (periodo_evaluacion_id, asignacion_docente_id)`.
+  - El cálculo del promedio estudiantil es la media aritmética `ROUND(AVG(calificacion), 2)`, por periodo y global del ciclo.
   - La valoración del docente se almacena y presenta en un bloque separado, respetando su peso cualitativo sin diluirlo en el promedio numérico de los alumnos.
 
 ### 7.2. Privacidad y Visibilidad Diferida
 * **Requisito Aprobado:**
-  - El delegado **únicamente** puede visualizar su promedio cuantitativo general cuando el periodo de evaluación haya concluido formalmente.
+  - El delegado únicamente puede visualizar los promedios cuantitativos de los periodos de evaluación ya concluidos formalmente, junto con su promedio global del ciclo una vez cerrados todos los periodos.
   - El delegado jamás tiene acceso a la identidad de los estudiantes que lo evaluaron ni a sus calificaciones individuales.
-  - El docente y el administrador pueden consultar el reporte con el promedio y la lista anonimizada de comentarios estudiantiles.
+  - El docente y el administrador pueden consultar el reporte con los promedios por periodo, el promedio global y la lista anonimizada de comentarios estudiantiles.
 
 ---
 
@@ -202,30 +203,30 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
 ## 9. Arquitectura Técnica y Stack Tecnológico
 
 ```
-┌────────────────────────────────────────────────────────┐
-│              FRONTEND (React 19 + Vite)                │
-│   - Tailwind CSS / Módulos CSS oficiales UTP           │
-│   - React Router DOM                                   │
-│   - Supabase Client (Suscripción Realtime Broadcast)   │
-│   - Axios (withCredentials: true, X-CSRF-Token)        │
-└───────────────────────────▲────────────────────────────┘
-                            │  HTTPS / Cookies / JSON
-┌───────────────────────────▼────────────────────────────┐
-│              BACKEND (Node.js + Express + TS)          │
-│   - Arquitectura por capas (Presentación / Aplicación) │
-│   - Validaciones con Zod                               │
-│   - Argon2id / Criptografía con Node Crypto            │
-│   - Publicador Supabase Realtime                       │
-│   - Integración Resend (SMTP/API)                      │
-└───────────────────────────▲────────────────────────────┘
-                            │  PostgreSQL Pooler (SET ROLE)
-┌───────────────────────────▼────────────────────────────┐
-│          BASE DE DATOS (PostgreSQL en Supabase)        │
-│   - Esquema Oficial 001_esquema_oficial.sql            │
-│   - Roles de Mínimos Privilegios (002_operaciones.sql) │
-│   - Procedimientos Transaccionales SECURITY DEFINER    │
-│   - Vistas Inmutables de Resultados y Auditoría        │
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                   FRONTEND (React 19 + Vite)                   │
+│   - Tailwind CSS / Módulos CSS oficiales UTP                   │
+│   - React Router DOM                                           │
+│   - Supabase Client (Suscripción Realtime Broadcast)           │
+│   - Axios (withCredentials: true, X-CSRF-Token)                │
+└───────────────────────────────▲────────────────────────────────┘
+                                │  HTTPS / Cookies / JSON
+┌───────────────────────────────▼────────────────────────────────┐
+│                BACKEND (Node.js + Express + TS)                │
+│   - Arquitectura por capas (Presentación / Aplicación)         │
+│   - Validaciones con Zod                                       │
+│   - Argon2id / Criptografía con Node Crypto                    │
+│   - ResultsPublisher (Supabase Realtime)                       │
+│   - Integración Resend (SMTP/API)                              │
+└───────────────────────────────▲────────────────────────────────┘
+                                │  PostgreSQL Pooler (SET ROLE)
+┌───────────────────────────────▼────────────────────────────────┐
+│            BASE DE DATOS (PostgreSQL en Supabase)              │
+│   - Esquema Oficial 001_esquema_oficial.sql                    │
+│   - Roles de Mínimos Privilegios (002_operaciones_y_roles.sql) │
+│   - Procedimientos Transaccionales SECURITY DEFINER            │
+│   - Vistas Inmutables de Resultados y Auditoría                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### 9.1. Fijación Estricta de Dependencias y Reproducibilidad
@@ -273,3 +274,55 @@ Las especificaciones aquí consignadas se estructuran bajo una rigurosa separaci
 ## 11. Conclusión y Aprobación
 
 Este documento constituye la **fuente de verdad oficial y definitiva** para la arquitectura, el diseño y la codificación de VoteSecure v1.0. Cualquier funcionalidad diferida (banco de preguntas para exámenes, propuestas premium o plugins multi-universitarios) queda formalmente relegada para la versión 2.0 una vez estabilizado y validado el Core Electoral y de Evaluación.
+
+---
+
+## Anexo A. Rutas complementarias del contrato (no incluidas en la matriz §10)
+
+Además de las rutas de la matriz §10, el backend expone las siguientes rutas complementarias porque las reglas de negocio de los apartados §2, §3, §6 y §7 las requieren para su gestión (creación de candidaturas, programación de elecciones, administración del padrón y bloqueo de inscripciones). Forman parte del contrato oficial que consume el frontend.
+
+| Método | Ruta | Rol permitido | Regla de negocio |
+|---|---|---|---|
+| `GET` | `/api/salud` | Público | Health check de despliegue. |
+| `GET` | `/api/auth/verificar` | Público | Confirmación del correo institucional (§2.1); redirige a `FRONTEND_URL/verificar-correo?estado=ok\|error`. |
+| `GET` | `/api/elecciones?seccionId=` | Miembro de la sección / Admin | Listado de elecciones de una sección; soporta la gestión de borradores (§3.2). |
+| `GET` | `/api/elecciones/activas` | Estudiante | Elecciones activas de sus secciones para emitir el voto (§4.2). |
+| `PATCH` | `/api/elecciones/:id` | Docente / Admin | Edición de nombre y fechas de la elección en borrador (§3.2). |
+| `POST` | `/api/elecciones/:id/candidaturas` | Docente / Admin | Alta de candidatura sobre una matrícula de la sección (§3.2). |
+| `DELETE` | `/api/elecciones/:id/candidaturas/:candidaturaId` | Docente / Admin | Retiro de candidatura antes de programar (§3.2). |
+| `POST` | `/api/elecciones/:id/habilitaciones` | Docente / Admin | Alta manual de habilitación de voto antes de la activación (§3.2). |
+| `DELETE` | `/api/elecciones/:id/habilitaciones/:habilitacionId` | Docente / Admin | Retiro de habilitación antes de la activación (§3.2). |
+| `POST` | `/api/elecciones/:id/programar` | Docente / Admin | Programación de la elección: exige al menos 2 candidaturas (`programar_eleccion`, §3.2). |
+| `POST` | `/api/elecciones/:id/cancelar` | Docente / Admin | Cancelación con motivo obligatorio (§8, evento `cancelacion`). |
+| `GET` | `/api/secciones/:id` | Miembro de la sección / Admin | Detalle de la sección (§3.1). |
+| `PATCH` | `/api/secciones/:id` | Docente responsable / Admin | Opción de **"Bloquear inscripciones"** (`activa`, §3.1). |
+| `GET` | `/api/secciones/:id/matriculas` | Miembro de la sección / Admin | Listado de matrículas de la sección (§3.1). |
+| `POST` | `/api/secciones/:id/matriculas` | Administrador | Alta manual de matrícula (§3.1). |
+| `PATCH` | `/api/matriculas/:id` | Administrador | Activar o desactivar una matrícula (§3.1). |
+| `GET` | `/api/secciones/:id/asignaciones` | Miembro de la sección / Admin | Listado de asignaciones docentes de la sección (§3.1). |
+| `POST` | `/api/secciones/:id/asignaciones` | Administrador | Asignación de un docente a la sección (§3.1). |
+| `PATCH` | `/api/asignaciones/:id` | Administrador | Activar o desactivar una asignación docente (§3.1). |
+| `GET` | `/api/evaluaciones/resumen?seccionId=` | Docente de la sección / Admin | Reporte de evaluación: promedio y comentarios anonimizados (§7.2). |
+| `POST` | `/api/auth/cambiar-contrasena` | Autenticado | Cambio de contraseña propio: exige la contraseña actual e **invalida la sesión vigente** (revisión 2026-11-12, F-009). |
+| `PATCH` | `/api/usuarios/:id` | Administrador | Activar o desactivar una cuenta (solo el campo `activo`); al desactivar, el trigger revoca la sesión del usuario (F-009). |
+
+Notas:
+
+- **Docente responsable** significa docente con asignación activa en `asignaciones_docentes` para esa sección (el docente que crea la sección queda auto-asignado como responsable, §3.1) o el rol `administrador`.
+- **Pertenencia a la sección (F-001):** las rutas de lectura marcadas «Miembro de la sección / Admin» exigen matrícula o asignación **activa** en la sección (o rol `administrador`); un usuario ajeno recibe 403 `PROHIBIDO`, también sobre elecciones cerradas. La decisión se evalúa en los casos de uso mediante `application/policies.ts`.
+- Las rutas mutantes (`POST`, `PATCH`, `PUT`, `DELETE`) exigen la protección CSRF descrita en §2.2.
+- Los literales JSON de respuesta (ej. `mensaje`, `seccion`, `eleccion`) son los del contrato y no cambian.
+
+---
+
+## Anexo B. Notas de integración para el frontend
+
+Contrato operativo que el frontend (plan posterior) debe cumplir para consumir esta API. No cambia ninguna decisión previa; documenta el cableado entre cliente y backend.
+
+1. **Cookies y CSRF (§2.2):** `POST /api/auth/login` emite dos cookies: `votecure_sesion` (HttpOnly, SameSite=Lax, Secure en producción) y `votecure_csrf` (legible por JavaScript). Todo método mutante debe enviar la cabecera `X-CSRF-Token` con el valor de la cookie `votecure_csrf`, y las peticiones deben viajar con credenciales (`withCredentials: true` en Axios o `credentials: 'include'` en `fetch`). Si el navegador envía `Origin`, debe coincidir con `FRONTEND_URL` (si no, 403 `PROHIBIDO`); `Referer` no se exige.
+2. **Formato uniforme de error:** todos los errores responden `{ "error": "<CODIGO>", "mensaje": "<texto>" }` con códigos `VALIDACION` (400), `NO_AUTENTICADO` (401), `PROHIBIDO` (403), `NO_ENCONTRADO` (404), `CONFLICTO` (409), `NEGOCIO` (422) e `INTERNO` (500).
+3. **Correo verificado:** la mayoría de los endpoints exige el correo institucional confirmado; sin confirmación responden 403 `PROHIBIDO`. `GET /api/auth/verificar?correo=&token=` redirige a `FRONTEND_URL/verificar-correo?estado=ok|error`. El objeto `usuario` de `POST /api/auth/login` y `GET /api/auth/yo` tiene la forma `{ id, nombre, correo, tipo, correoVerificado }`, con `tipo` ∈ `'estudiante' | 'docente' | 'administrador'`.
+4. **Resultados en vivo (§5.1):** el cliente invoca `POST /api/resultados/:id/suscripcion` y recibe `{ canal, expiraEn }`; debe abrir la suscripción a ese canal de Supabase Realtime Broadcast (con `SUPABASE_URL` y `SUPABASE_ANON_KEY`) **antes** de `expiraEn` (ticket HMAC efímero de 60 s) y renovar el ticket antes de su vencimiento. El backend publica cada carga en la ventana actual y la anterior (rotación por minuto), por lo que una suscripción en vuelo no pierde eventos durante la rotación del ticket. El payload de cada evento es el especificado en §5.1.
+5. **Evaluaciones múltiples con envío único por periodo (§7.1):** el docente responsable puede abrir hasta 3 periodos por ciclo con `POST /api/evaluaciones/periodos` (la 4.ª apertura o una ventana solapada responden 422 `NEGOCIO`). `POST /api/evaluaciones` registra una única evaluación por evaluador y periodo; un segundo intento responde 409 `CONFLICTO` («Ya enviaste tu evaluacion en este periodo») y la interfaz debe reflejar que el formulario ya fue enviado. Acepta `periodoId` opcional para atribuir la evaluación a un periodo concreto (si se omite, se usa el abierto). El delegado consulta `GET /api/evaluaciones/delegado`: `promediosPorPeriodo` solo con los periodos ya cerrados y `promedioGlobal` al cerrarse todos (§7.2); docente/admin ven en `GET /api/evaluaciones/resumen` el detalle `periodos[]` y el bloque `global`.
+6. **Roles y administradores:** `tipo` distingue los tres roles del §2.1; el rol `administrador` nunca se crea por registro público (solo CLI de aprovisionamiento), por lo que el frontend no debe ofrecer esa opción.
+7. **Pertenencia a la sección y gestión de cuentas (revisión 2026-11-12):** las rutas de lectura de sección y elección responden 403 `PROHIBIDO` a quien no pertenece a la sección (Anexo A); el frontend debe tratar ese 403 como "sin acceso" y no como error. `POST /api/auth/cambiar-contrasena` recibe `{ contrasenaActual, contrasenaNueva }` (15–128 caracteres), responde 422 `NEGOCIO` si la actual no coincide y **cierra la sesión actual** (tras el cambio se debe volver a `POST /api/auth/login`). `PATCH /api/usuarios/:id` con `{ activa: boolean }` es exclusivo del administrador y, al desactivar, la sesión del usuario afectado queda revocada al instante. Todas las respuestas incluyen la cabecera `X-Request-Id` para correlación en soporte.

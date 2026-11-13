@@ -16,7 +16,11 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
   logger.error(
-    { error: error instanceof Error ? error.stack : String(error), ruta: req.path },
+    {
+      requestId: req.requestId,
+      error: error instanceof Error ? error.stack : String(error),
+      ruta: req.path
+    },
     'Error no controlado'
   );
   res.status(500).json({ error: 'INTERNO', mensaje: 'Error interno del servidor' });

@@ -60,7 +60,13 @@ describe.skipIf(!CONNECTION_AVAILABLE)('flujo electoral completo (transaccion co
   };
 
   beforeAll(async () => {
-    pool = new Pool({ connectionString: CONNECTION_STRING, max: 1 });
+    // Timeout de conexion: el host directo de Supabase resuelve DNS de
+    // forma intermitente y un valor infinito cuelga el beforeAll.
+    pool = new Pool({
+      connectionString: CONNECTION_STRING,
+      max: 1,
+      connectionTimeoutMillis: 15_000
+    });
     client = await pool.connect();
     await client.query('BEGIN');
 
@@ -230,9 +236,13 @@ describe.skipIf(!CONNECTION_AVAILABLE)('flujo electoral completo (transaccion co
       [electionId, sectionId, summary.rows[0].ganador_candidatura_id]
     );
     const period = await asApi(
-      `INSERT INTO periodos_evaluacion (delegacion_id, seccion_id, abre_en, cierra_en)
-       VALUES ($1,$2, now(), now() + interval '1 day') RETURNING id`,
-      [Number(delegation.rows[0].id), sectionId]
+      `INSERT INTO periodos_evaluacion (delegacion_id, seccion_id, abre_en, cierra_en, instrucciones)
+       VALUES ($1,$2, now(), now() + interval '1 day', $3) RETURNING id`,
+      [
+        Number(delegation.rows[0].id),
+        sectionId,
+        'Instrucciones de prueba para el periodo de evaluacion del delegado.'
+      ]
     );
     await asApi(
       `INSERT INTO evaluaciones_estudiantes (periodo_evaluacion_id, seccion_id, matricula_id, calificacion, comentario)

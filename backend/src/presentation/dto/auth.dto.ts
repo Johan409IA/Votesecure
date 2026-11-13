@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PASSWORD_LIMITS } from '../../application/services/passwords';
 import { deriveUserTypeFromEmail } from '../../application/services/roles';
+import { positiveInt } from './common.dto';
 
 export const registerSchema = z.object({
   nombre: z
@@ -31,11 +32,19 @@ export const loginSchema = z.object({
   contrasena: z.string().min(1)
 });
 
+export const cambiarContrasenaSchema = z.object({
+  contrasenaActual: z.string().min(1),
+  contrasenaNueva: z
+    .string()
+    .min(PASSWORD_LIMITS.min, { message: `Minimo ${PASSWORD_LIMITS.min} caracteres` })
+    .max(PASSWORD_LIMITS.max, { message: `Maximo ${PASSWORD_LIMITS.max} caracteres` })
+});
+
 export const verifyQuerySchema = z.object({
   correo: z.string().trim().toLowerCase().pipe(z.email()),
   token: z.string().min(10)
 });
 
 export const idParamSchema = z.object({
-  id: z.coerce.number().int().positive()
+  id: positiveInt
 });

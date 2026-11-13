@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import * as academicUseCases from '../../application/use-cases/academic.use-cases';
 import { authenticate, requireRole, requireVerified } from '../middleware/session';
+import { joinRateLimit } from '../middleware/rate-limits';
 import { validate, validateData } from '../middleware/validate';
+import { positiveInt } from '../dto/common.dto';
 import {
   activeToggleSchema,
   assignmentSchema,
@@ -12,7 +14,7 @@ import {
 } from '../dto/election.dto';
 import type { ApiContext } from '../context';
 
-const idParam = z.object({ id: z.coerce.number().int().positive() });
+const idParam = z.object({ id: positiveInt });
 
 export function createSectionRoutes(_ctx: ApiContext): Router {
   const router = Router();
@@ -29,11 +31,12 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
     '/secciones',
     authenticate,
     requireVerified,
-    requireRole('administrador'),
+    // §10: la creacion de secciones es de Docente / Admin.
+    requireRole('docente', 'administrador'),
     validate(sectionSchema),
     async (req, res, next) => {
       try {
-        const section = await academicUseCases.createSection({
+        const section = await academicUseCases.createSection(req.user!, {
           courseCode: req.body.codigoCurso,
           courseName: req.body.nombreCurso,
           academicPeriod: req.body.periodoAcademico
@@ -47,6 +50,7 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
 
   router.post(
     '/secciones/unirse',
+    joinRateLimit,
     authenticate,
     requireVerified,
     requireRole('estudiante'),
@@ -67,7 +71,7 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
   router.get('/secciones/:id', authenticate, requireVerified, async (req, res, next) => {
     try {
       const { id } = validateData(idParam, req.params);
-      res.json({ seccion: await academicUseCases.getSection(id) });
+      res.json({ seccion: await academicUseCases.getSection(req.user!, id) });
     } catch (error) {
       next(error);
     }
@@ -77,12 +81,14 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
     '/secciones/:id',
     authenticate,
     requireVerified,
-    requireRole('administrador'),
+    // §3.1: "Bloquear inscripciones" es del docente responsable; el caso
+    // de uso exige asignacion activa o rol administrador.
+    requireRole('docente', 'administrador'),
     validate(activeToggleSchema),
     async (req, res, next) => {
       try {
         const { id } = validateData(idParam, req.params);
-        await academicUseCases.setSectionActive(id, req.body.activa);
+        await academicUseCases.setSectionActive(req.user!, id, req.body.activa);
         res.json({ mensaje: 'Seccion actualizada' });
       } catch (error) {
         next(error);
@@ -117,7 +123,7 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
     async (req, res, next) => {
       try {
         const { id } = validateData(idParam, req.params);
-        res.json({ matriculas: await academicUseCases.listEnrollments(id) });
+        res.json({ matriculas: await academicUseCases.listEnrollments(req.user!, id) });
       } catch (error) {
         next(error);
       }
@@ -168,7 +174,7 @@ export function createSectionRoutes(_ctx: ApiContext): Router {
     async (req, res, next) => {
       try {
         const { id } = validateData(idParam, req.params);
-        res.json({ asignaciones: await academicUseCases.listAssignments(id) });
+        res.json({ asignaciones: await academicUseCases.listAssignments(req.user!, id) });
       } catch (error) {
         next(error);
       }

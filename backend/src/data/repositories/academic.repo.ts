@@ -1,5 +1,8 @@
 import { withTransaction } from '../db';
 
+// F-012: tope maximo de las listas de lectura (mismo modelo que audit.repo).
+const LIST_LIMIT = 500;
+
 export interface Section {
   id: number;
   courseCode: string;
@@ -36,7 +39,10 @@ export interface NewSectionData {
   code: string;
 }
 
-export async function createSection(data: NewSectionData): Promise<Section> {
+export async function createSection(
+  data: NewSectionData,
+  assignedTeacherId?: number
+): Promise<Section> {
   return withTransaction(async (client) => {
     const result = await client.query<SectionRow>(
       `INSERT INTO secciones (codigo_curso, nombre_curso, periodo_academico, codigo)
@@ -44,7 +50,16 @@ export async function createSection(data: NewSectionData): Promise<Section> {
          periodo_academico, codigo, activa`,
       [data.courseCode, data.courseName, data.academicPeriod, data.code]
     );
-    return mapSection(result.rows[0]!);
+    const section = mapSection(result.rows[0]!);
+    // §3.1: el docente creador queda como responsable de su seccion,
+    // en la misma transaccion que la creacion.
+    if (assignedTeacherId !== undefined) {
+      await client.query(
+        `INSERT INTO asignaciones_docentes (seccion_id, docente_id) VALUES ($1, $2)`,
+        [section.id, assignedTeacherId]
+      );
+    }
+    return section;
   });
 }
 
@@ -66,7 +81,8 @@ export async function listSections(): Promise<Section[]> {
   return withTransaction(async (client) => {
     const result = await client.query<SectionRow>(
       `SELECT id, codigo_curso, nombre_curso, periodo_academico, codigo, activa
-       FROM secciones ORDER BY periodo_academico DESC, codigo_curso, codigo`
+       FROM secciones ORDER BY periodo_academico DESC, codigo_curso, codigo
+       LIMIT ${LIST_LIMIT}`
     );
     return result.rows.map(mapSection);
   });
@@ -152,22 +168,46 @@ export async function listEnrollmentsBySection(
 ): Promise<Enrollment[]> {
   return withTransaction(async (client) => {
     const result = await client.query<EnrollmentRow>(
-      `${ENROLLMENT_SELECT} WHERE m.seccion_id = $1 ORDER BY u.nombre`,
+      `${ENROLLMENT_SELECT} WHERE m.seccion_id = $1 ORDER BY u.nombre
+       LIMIT ${LIST_LIMIT}`,
       [sectionId]
     );
     return result.rows.map(mapEnrollment);
   });
 }
 
-export async function listEnrollmentsByStudent(
-  studentId: number
-): Promise<Enrollment[]> {
+// F-007: secciones visibles del usuario en una sola consulta (antes habia un
+// bucle con una consulta por matricula/asignacion).
+const SECTION_JOIN_COLUMNS = `s.id, s.codigo_curso, s.nombre_curso,
+  s.periodo_academico, s.codigo, s.activa`;
+
+export async function listSectionsByStudent(studentId: number): Promise<Section[]> {
   return withTransaction(async (client) => {
-    const result = await client.query<EnrollmentRow>(
-      `${ENROLLMENT_SELECT} WHERE m.estudiante_id = $1 AND m.activa ORDER BY m.id`,
+    const result = await client.query<SectionRow>(
+      `SELECT ${SECTION_JOIN_COLUMNS}
+       FROM secciones s
+       JOIN matriculas m ON m.seccion_id = s.id
+       WHERE m.estudiante_id = $1 AND m.activa
+       ORDER BY s.periodo_academico DESC, s.codigo_curso, s.codigo
+       LIMIT ${LIST_LIMIT}`,
       [studentId]
     );
-    return result.rows.map(mapEnrollment);
+    return result.rows.map(mapSection);
+  });
+}
+
+export async function listSectionsByTeacher(teacherId: number): Promise<Section[]> {
+  return withTransaction(async (client) => {
+    const result = await client.query<SectionRow>(
+      `SELECT ${SECTION_JOIN_COLUMNS}
+       FROM secciones s
+       JOIN asignaciones_docentes a ON a.seccion_id = s.id
+       WHERE a.docente_id = $1 AND a.activa
+       ORDER BY s.periodo_academico DESC, s.codigo_curso, s.codigo
+       LIMIT ${LIST_LIMIT}`,
+      [teacherId]
+    );
+    return result.rows.map(mapSection);
   });
 }
 
@@ -239,20 +279,9 @@ export async function listAssignmentsBySection(
 ): Promise<TeacherAssignment[]> {
   return withTransaction(async (client) => {
     const result = await client.query<AssignmentRow>(
-      `${ASSIGNMENT_SELECT} WHERE a.seccion_id = $1 ORDER BY u.nombre`,
+      `${ASSIGNMENT_SELECT} WHERE a.seccion_id = $1 ORDER BY u.nombre
+       LIMIT ${LIST_LIMIT}`,
       [sectionId]
-    );
-    return result.rows.map(mapAssignment);
-  });
-}
-
-export async function listAssignmentsByTeacher(
-  teacherId: number
-): Promise<TeacherAssignment[]> {
-  return withTransaction(async (client) => {
-    const result = await client.query<AssignmentRow>(
-      `${ASSIGNMENT_SELECT} WHERE a.docente_id = $1 AND a.activa ORDER BY a.id`,
-      [teacherId]
     );
     return result.rows.map(mapAssignment);
   });

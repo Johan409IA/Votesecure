@@ -1,4 +1,5 @@
-import { withTransaction } from '../db';
+import type { PoolClient } from 'pg';
+import { withTransaction, withClient } from '../db';
 
 export interface CandidacyCount {
   candidacyId: number;
@@ -20,9 +21,10 @@ export async function castVote(
 }
 
 export async function countVotesByCandidacy(
-  electionId: number
+  electionId: number,
+  tx?: PoolClient
 ): Promise<CandidacyCount[]> {
-  return withTransaction(async (client) => {
+  return withClient(async (client) => {
     const result = await client.query<{ candidatura_id: string; votos: string }>(
       'SELECT candidatura_id, votos FROM contar_votos_eleccion($1)',
       [electionId]
@@ -31,7 +33,7 @@ export async function countVotesByCandidacy(
       candidacyId: Number(row.candidatura_id),
       votes: Number(row.votos)
     }));
-  });
+  }, tx);
 }
 
 export interface Participation {
@@ -40,9 +42,10 @@ export interface Participation {
 }
 
 export async function electionParticipation(
-  electionId: number
+  electionId: number,
+  tx?: PoolClient
 ): Promise<Participation> {
-  return withTransaction(async (client) => {
+  return withClient(async (client) => {
     const result = await client.query<{ total: string; participantes: string }>(
       `SELECT count(*) AS total,
               count(*) FILTER (WHERE ha_votado) AS participantes
@@ -54,5 +57,5 @@ export async function electionParticipation(
       totalEligible: Number(row?.total ?? 0),
       totalParticipants: Number(row?.participantes ?? 0)
     };
-  });
+  }, tx);
 }

@@ -23,3 +23,13 @@ export const registerRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: 'LIMITE', mensaje: 'Demasiados registros desde esta direccion' }
 });
+
+// F-003: el codigo de seccion es un secreto corto; sin limite propio, el
+// limite general dejaba la fuerza bruta practicamente abierta.
+export const joinRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'LIMITE', mensaje: 'Demasiados intentos de inscripcion, intenta mas tarde' }
+});

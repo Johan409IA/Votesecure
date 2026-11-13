@@ -37,15 +37,30 @@ export async function viewDelegate(user: SessionUser, sectionId: number) {
   const response: {
     delegacion: evaluationsRepo.Delegation;
     periodoAbierto: evaluationsRepo.EvaluationPeriod | null;
-    promedioDelegado?: number | null;
+    promediosPorPeriodo?: Array<{
+      periodoId: number;
+      cierraEn: Date;
+      promedio: number | null;
+    }>;
+    promedioGlobal?: number | null;
   } = { delegacion: delegation, periodoAbierto: period };
 
-  // §7.2: el delegado solo ve su promedio general cuando el periodo ha
-  // concluido formalmente; jamas evaluadores individuales.
+  // §7.2: el delegado ve el promedio de cada periodo solo tras su cierre y
+  // el global al cerrarse todos; jamas evaluadores individuales.
   if (user.id === delegation.delegateStudentId) {
-    const latest = await evaluationsRepo.latestPeriodByDelegation(delegation.id);
-    if (latest && latest.closesAt.getTime() <= Date.now()) {
-      response.promedioDelegado = await evaluationsRepo.studentAverageByDelegation(
+    const averages = await evaluationsRepo.studentAveragesByPeriod(
+      delegation.id
+    );
+    const closed = averages.filter(
+      (item) => item.closesAt.getTime() <= Date.now()
+    );
+    response.promediosPorPeriodo = closed.map((item) => ({
+      periodoId: item.periodId,
+      cierraEn: item.closesAt,
+      promedio: item.average
+    }));
+    if (averages.length > 0 && closed.length === averages.length) {
+      response.promedioGlobal = await evaluationsRepo.studentAverageByDelegation(
         delegation.id
       );
     }
@@ -59,13 +74,25 @@ export async function evaluateDelegate(
     sectionId: number;
     grade: number;
     comment?: string;
+    periodId?: number;
   }
 ): Promise<void> {
   const delegation = await evaluationsRepo.currentDelegationBySection(data.sectionId);
   if (!delegation) {
     throw new NotFoundError('No hay delegado vigente en la seccion');
   }
-  const period = await evaluationsRepo.currentPeriodByDelegation(delegation.id);
+  let period: evaluationsRepo.EvaluationPeriod | null;
+  if (data.periodId !== undefined) {
+    // Atribucion explicita: evita enviar la evaluacion a otro periodo
+    // cuando el formulario quedo abierto y el periodo cerro (§7.1).
+    period = await evaluationsRepo.getPeriodById(data.periodId);
+    if (!period) throw new NotFoundError('Periodo de evaluacion no encontrado');
+    if (period.delegationId !== delegation.id) {
+      throw new BusinessError('El periodo no pertenece a la delegacion vigente');
+    }
+  } else {
+    period = await evaluationsRepo.currentPeriodByDelegation(delegation.id);
+  }
   if (!period) {
     throw new BusinessError('El periodo de evaluacion no esta abierto');
   }

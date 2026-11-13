@@ -20,7 +20,8 @@ export class ElectionScheduler {
 
   private async runCycle(): Promise<void> {
     try {
-      const toActivate = await electionsRepo.listScheduledToActivate();
+      // F-018: una sola consulta por ciclo para ambas transiciones.
+      const { toActivate, toClose } = await electionsRepo.listDueTransitions();
       for (const election of toActivate) {
         try {
           await electionsRepo.activate(election.id);
@@ -29,7 +30,6 @@ export class ElectionScheduler {
           logger.warn({ electionId: election.id, error: String(error) }, 'No se pudo activar la eleccion');
         }
       }
-      const toClose = await electionsRepo.listActiveToClose();
       for (const election of toClose) {
         try {
           await electionsRepo.closeAndPublish(election.id);

@@ -6,6 +6,7 @@ import * as resultUseCases from '../../application/use-cases/result.use-cases';
 import { ForbiddenError } from '../../shared/errors';
 import { authenticate, requireVerified } from '../middleware/session';
 import { validate, validateData } from '../middleware/validate';
+import { positiveInt } from '../dto/common.dto';
 import {
   cancelSchema,
   candidacySchema,
@@ -26,16 +27,16 @@ function requireManagement(req: Request, _res: Response, next: NextFunction): vo
 
 const management = [authenticate, requireVerified, requireManagement];
 
-const idParam = z.object({ id: z.coerce.number().int().positive() });
+const idParam = z.object({ id: positiveInt });
 const electionAndCandidacyParam = z.object({
-  id: z.coerce.number().int().positive(),
-  candidaturaId: z.coerce.number().int().positive()
+  id: positiveInt,
+  candidaturaId: positiveInt
 });
 const electionAndEligibilityParam = z.object({
-  id: z.coerce.number().int().positive(),
-  habilitacionId: z.coerce.number().int().positive()
+  id: positiveInt,
+  habilitacionId: positiveInt
 });
-const sectionQuery = z.object({ seccionId: z.coerce.number().int().positive() });
+const sectionQuery = z.object({ seccionId: positiveInt });
 
 export function createElectionRoutes(ctx: ApiContext): Router {
   const router = Router();
@@ -81,18 +82,8 @@ export function createElectionRoutes(ctx: ApiContext): Router {
   router.get('/elecciones/:id', authenticate, requireVerified, async (req, res, next) => {
     try {
       const { id } = validateData(idParam, req.params);
-      const user = req.user!;
-      const detail = await electionUseCases.electionDetail(id);
-      if (user.type === 'estudiante') {
-        const member = await resultUseCases.isSectionMember(
-          user.id,
-          detail.election.sectionId
-        );
-        if (!member && detail.election.status !== 'cerrada') {
-          next(new ForbiddenError('No perteneces a la seccion de esta eleccion'));
-          return;
-        }
-      }
+      // §10: "Miembro / Admin"; la policy de pertenencia vive en el caso de uso.
+      const detail = await electionUseCases.electionDetail(req.user!, id);
       res.json(detail);
     } catch (error) {
       next(error);

@@ -3,6 +3,7 @@ import * as usersRepo from '../../data/repositories/user.repo';
 import {
   PASSWORD_LIMITS,
   hashPassword,
+  verifyAgainstDummyHash,
   verifyPassword
 } from '../services/passwords';
 import {
@@ -26,9 +27,12 @@ const GENERIC_MESSAGE = 'Credenciales invalidas';
 interface LoginAttempts {
   failures: number;
   lockedUntil?: number;
+  lastAt: number;
 }
 
 const loginAttempts = new Map<string, LoginAttempts>();
+// F-013: tope defensivo del mapa de intentos por correo.
+const MAX_TRACKED_EMAILS = 1000;
 
 export interface SessionResult {
   user: {
@@ -102,6 +106,7 @@ export async function login(
   ttlHours: number
 ): Promise<SessionResult> {
   const normalizedEmail = normalizeEmail(data.email);
+  purgeLoginAttempts();
   const attempt = loginAttempts.get(normalizedEmail);
   if (attempt?.lockedUntil && attempt.lockedUntil > Date.now()) {
     throw new UnauthenticatedError(GENERIC_MESSAGE);
@@ -109,6 +114,8 @@ export async function login(
 
   const user = await usersRepo.getByEmail(normalizedEmail);
   if (!user || !user.active) {
+    // F-014: hash senuelo para igualar el coste del camino de usuario existente.
+    await verifyAgainstDummyHash(data.password);
     recordFailure(normalizedEmail);
     throw new UnauthenticatedError(GENERIC_MESSAGE);
   }
@@ -157,11 +164,30 @@ export async function logout(userId: number): Promise<void> {
 }
 
 function recordFailure(email: string): void {
-  const attempt = loginAttempts.get(email) ?? { failures: 0 };
+  const now = Date.now();
+  const attempt = loginAttempts.get(email) ?? { failures: 0, lastAt: now };
   attempt.failures += 1;
+  attempt.lastAt = now;
   if (attempt.failures >= MAX_ATTEMPTS) {
-    attempt.lockedUntil = Date.now() + LOCKOUT_MS;
+    attempt.lockedUntil = now + LOCKOUT_MS;
     attempt.failures = 0;
   }
   loginAttempts.set(email, attempt);
+}
+
+// F-013: purga perezosa de entradas vencidas y tope maximo, para que el mapa
+// no crezca sin limite con correos inexistentes.
+function purgeLoginAttempts(): void {
+  const now = Date.now();
+  for (const [email, attempt] of loginAttempts) {
+    const expired =
+      (attempt.lockedUntil !== undefined && attempt.lockedUntil < now) ||
+      now - attempt.lastAt > LOCKOUT_MS;
+    if (expired) loginAttempts.delete(email);
+  }
+  while (loginAttempts.size > MAX_TRACKED_EMAILS) {
+    const oldest = loginAttempts.keys().next().value;
+    if (oldest === undefined) break;
+    loginAttempts.delete(oldest);
+  }
 }

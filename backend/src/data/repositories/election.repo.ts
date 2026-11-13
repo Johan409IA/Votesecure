@@ -1,5 +1,9 @@
-import { withTransaction } from '../db';
+import type { PoolClient } from 'pg';
+import { withTransaction, withClient } from '../db';
 import { NotFoundError } from '../../shared/errors';
+
+// F-012: tope maximo de las listas de lectura (mismo modelo que audit.repo).
+const LIST_LIMIT = 500;
 
 export type ElectionStatus =
   | 'borrador'
@@ -117,15 +121,18 @@ export async function createElection(
   });
 }
 
-export async function getElection(id: number): Promise<Election | null> {
-  return withTransaction(async (client) => {
+export async function getElection(
+  id: number,
+  tx?: PoolClient
+): Promise<Election | null> {
+  return withClient(async (client) => {
     const result = await client.query<ElectionRow>(
       `SELECT ${COLUMNS} FROM elecciones WHERE id = $1`,
       [id]
     );
     const row = result.rows[0];
     return row ? mapElection(row) : null;
-  });
+  }, tx);
 }
 
 export async function updateElection(
@@ -150,7 +157,8 @@ export async function listElectionsBySection(
   return withTransaction(async (client) => {
     const result = await client.query<ElectionRow>(
       `SELECT ${COLUMNS} FROM elecciones
-       WHERE seccion_id = $1 ORDER BY creado_en DESC`,
+       WHERE seccion_id = $1 ORDER BY creado_en DESC
+       LIMIT ${LIST_LIMIT}`,
       [sectionId]
     );
     return result.rows.map(mapElection);
@@ -232,15 +240,17 @@ export async function removeCandidacy(
 }
 
 export async function listCandidacies(
-  electionId: number
+  electionId: number,
+  tx?: PoolClient
 ): Promise<Candidacy[]> {
-  return withTransaction(async (client) => {
+  return withClient(async (client) => {
     const result = await client.query<CandidacyRow>(
-      `${CANDIDACY_SELECT} WHERE c.eleccion_id = $1 ORDER BY u.nombre`,
+      `${CANDIDACY_SELECT} WHERE c.eleccion_id = $1 ORDER BY u.nombre
+       LIMIT ${LIST_LIMIT}`,
       [electionId]
     );
     return result.rows.map(mapCandidacy);
-  });
+  }, tx);
 }
 
 export interface Eligibility {
@@ -324,7 +334,8 @@ export async function listEligibilities(
        FROM habilitaciones_voto h
        JOIN matriculas m ON m.id = h.matricula_id
        JOIN usuarios u ON u.id = m.estudiante_id
-       WHERE h.eleccion_id = $1 ORDER BY u.nombre`,
+       WHERE h.eleccion_id = $1 ORDER BY u.nombre
+       LIMIT ${LIST_LIMIT}`,
       [electionId]
     );
     return result.rows.map(mapEligibility);
@@ -362,41 +373,52 @@ export async function activate(electionId: number): Promise<void> {
 
 export async function closeAndPublish(
   electionId: number,
-  early = false
+  early = false,
+  tx?: PoolClient
 ): Promise<void> {
-  await withTransaction(async (client) => {
+  await withClient(async (client) => {
     await client.query('SELECT cerrar_y_publicar_resultados($1, $2)', [electionId, early]);
-  });
+  }, tx);
 }
 
-export async function listScheduledToActivate(): Promise<Election[]> {
+export interface DueTransitions {
+  toActivate: Election[];
+  toClose: Election[];
+}
+
+// F-018: una sola consulta con ambas transiciones pendientes del planificador
+// (antes eran dos consultas por ciclo, sin LIMIT).
+export async function listDueTransitions(): Promise<DueTransitions> {
   return withTransaction(async (client) => {
-    const result = await client.query<ElectionRow>(
-      `SELECT ${COLUMNS} FROM elecciones
-       WHERE estado = 'programada' AND inicia_en <= now() AND cierra_en > now()`
+    const result = await client.query<ElectionRow & { accion: string }>(
+      `SELECT ${COLUMNS},
+              CASE WHEN estado = 'programada' THEN 'activar' ELSE 'cerrar' END AS accion
+       FROM elecciones
+       WHERE (estado = 'programada' AND inicia_en <= now() AND cierra_en > now())
+          OR (estado = 'activa' AND cierra_en <= now())
+       ORDER BY creado_en
+       LIMIT ${LIST_LIMIT}`
     );
-    return result.rows.map(mapElection);
+    const toActivate: Election[] = [];
+    const toClose: Election[] = [];
+    for (const row of result.rows) {
+      (row.accion === 'activar' ? toActivate : toClose).push(mapElection(row));
+    }
+    return { toActivate, toClose };
   });
 }
 
-export async function listActiveToClose(): Promise<Election[]> {
+export async function listActiveByStudent(studentId: number): Promise<Election[]> {
   return withTransaction(async (client) => {
+    // F-007: elecciones activas de todas las secciones del estudiante en una
+    // sola consulta (antes habia una consulta por matricula).
     const result = await client.query<ElectionRow>(
-      `SELECT ${COLUMNS} FROM elecciones
-       WHERE estado = 'activa' AND cierra_en <= now()`
-    );
-    return result.rows.map(mapElection);
-  });
-}
-
-export async function listActiveBySection(
-  sectionId: number
-): Promise<Election[]> {
-  return withTransaction(async (client) => {
-    const result = await client.query<ElectionRow>(
-      `SELECT ${COLUMNS} FROM elecciones
-       WHERE seccion_id = $1 AND estado = 'activa'`,
-      [sectionId]
+      `SELECT e.* FROM elecciones e
+       JOIN matriculas m ON m.seccion_id = e.seccion_id
+       WHERE m.estudiante_id = $1 AND m.activa AND e.estado = 'activa'
+       ORDER BY e.creado_en DESC
+       LIMIT ${LIST_LIMIT}`,
+      [studentId]
     );
     return result.rows.map(mapElection);
   });

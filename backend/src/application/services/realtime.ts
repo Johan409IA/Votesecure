@@ -92,7 +92,21 @@ export class ResultsPublisher {
         throw new Error(`Realtime rechazo la publicacion: ${status}`);
       }
     }
-    await this.pruneChannels(electionId, current);
+    await this.pruneChannels(current);
+  }
+
+  // F-019: retira todos los canales de una eleccion (se invoca al cerrarla).
+  async close(electionId: number): Promise<void> {
+    const prefix = `resultados:${electionId}:`;
+    for (const [name, channel] of [...this.channels]) {
+      if (name.startsWith(prefix)) {
+        await this.client.removeChannel(channel);
+        this.channels.delete(name);
+        this.subscribed.delete(name);
+        this.channelWindows.delete(name);
+        logger.debug({ channel: name }, 'Canal Realtime retirado al cerrar la eleccion');
+      }
+    }
   }
 
   async stop(): Promise<void> {
@@ -104,19 +118,13 @@ export class ResultsPublisher {
     this.channelWindows.clear();
   }
 
-  // Retira los canales de ventanas ya vencidas de esta eleccion.
-  private async pruneChannels(
-    electionId: number,
-    currentIndex: number
-  ): Promise<void> {
-    const prefix = `resultados:${electionId}:`;
+  // F-019: purga global por antiguedad de ventana (antes solo se purgaban los
+  // canales de la eleccion publicada, y las elecciones sin trafico acumulaban
+  // suscripciones para siempre).
+  private async pruneChannels(currentIndex: number): Promise<void> {
     for (const [name, channel] of this.channels) {
       const index = this.channelWindows.get(name);
-      if (
-        name.startsWith(prefix) &&
-        index !== undefined &&
-        index < currentIndex - 1
-      ) {
+      if (index !== undefined && index < currentIndex - 1) {
         await this.client.removeChannel(channel);
         this.channels.delete(name);
         this.subscribed.delete(name);

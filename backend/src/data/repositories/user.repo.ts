@@ -133,6 +133,31 @@ export async function endSession(userId: number): Promise<void> {
   });
 }
 
+// F-009: gestion de cuentas via funciones SECURITY DEFINER (sql/008); el rol
+// API no tiene UPDATE sobre usuarios.
+export async function setUserActive(
+  userId: number,
+  active: boolean,
+  adminId: number
+): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query('SELECT cambiar_estado_usuario($1, $2, $3)', [
+      userId,
+      active,
+      adminId
+    ]);
+  });
+}
+
+export async function updatePasswordHash(
+  userId: number,
+  passwordHash: string
+): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query('SELECT cambiar_contrasena($1, $2)', [userId, passwordHash]);
+  });
+}
+
 export async function confirmEmail(
   email: string,
   tokenHash: Buffer

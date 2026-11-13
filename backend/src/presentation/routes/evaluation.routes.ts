@@ -33,7 +33,8 @@ export function createEvaluationRoutes(_ctx: ApiContext): Router {
         await evaluationUseCases.evaluateDelegate(req.user!, {
           sectionId: req.body.seccionId,
           grade: req.body.calificacion,
-          comment: req.body.comentario
+          comment: req.body.comentario,
+          periodId: req.body.periodoId
         });
         res.status(201).json({ mensaje: 'Evaluacion registrada' });
       } catch (error) {

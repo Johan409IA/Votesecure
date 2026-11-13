@@ -1,16 +1,17 @@
 import { z } from 'zod';
+import { boundedDate, positiveInt } from './common.dto';
 
 export const idElectionParamSchema = z.object({
-  id: z.coerce.number().int().positive()
+  id: positiveInt
 });
 
 export const createElectionSchema = z.object({
-  seccionId: z.coerce.number().int().positive(),
+  seccionId: positiveInt,
   nombre: z.string().trim().min(3).max(160),
-  iniciaEn: z.coerce.date(),
-  cierraEn: z.coerce.date(),
+  iniciaEn: boundedDate,
+  cierraEn: boundedDate,
   tipo: z.enum(['desempate', 'repeticion']).optional(),
-  eleccionOrigenId: z.coerce.number().int().positive().optional()
+  eleccionOrigenId: positiveInt.optional()
 }).refine((data) => data.cierraEn > data.iniciaEn, {
   message: 'La fecha de cierre debe ser posterior a la de inicio',
   path: ['cierraEn']
@@ -33,17 +34,17 @@ export const createElectionSchema = z.object({
 export const updateElectionSchema = z
   .object({
     nombre: z.string().trim().min(3).max(160).optional(),
-    iniciaEn: z.coerce.date().optional(),
-    cierraEn: z.coerce.date().optional()
+    iniciaEn: boundedDate.optional(),
+    cierraEn: boundedDate.optional()
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Sin cambios' });
 
 export const candidacySchema = z.object({
-  matriculaId: z.coerce.number().int().positive()
+  matriculaId: positiveInt
 });
 
 export const voteSchema = z.object({
-  candidaturaId: z.coerce.number().int().positive()
+  candidaturaId: positiveInt
 });
 
 export const cancelSchema = z.object({
@@ -51,14 +52,14 @@ export const cancelSchema = z.object({
 });
 
 export const delegationSchema = z.object({
-  iniciaEn: z.coerce.date(),
-  terminaEn: z.coerce.date().nullable().optional()
+  iniciaEn: boundedDate,
+  terminaEn: boundedDate.nullable().optional()
 });
 
 export const evaluationPeriodSchema = z.object({
-  delegacionId: z.coerce.number().int().positive(),
-  abreEn: z.coerce.date(),
-  cierraEn: z.coerce.date(),
+  delegacionId: positiveInt,
+  abreEn: boundedDate,
+  cierraEn: boundedDate,
   instrucciones: z.string().trim().min(20).max(1000)
 }).refine((data) => data.cierraEn > data.abreEn, {
   message: 'El cierre debe ser posterior a la apertura',
@@ -84,9 +85,9 @@ export const activeToggleSchema = z.object({
 });
 
 export const enrollmentSchema = z.object({
-  estudianteId: z.coerce.number().int().positive()
+  estudianteId: positiveInt
 });
 
 export const assignmentSchema = z.object({
-  docenteId: z.coerce.number().int().positive()
+  docenteId: positiveInt
 });

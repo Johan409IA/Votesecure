@@ -5,13 +5,6 @@ import type { ResultsPublisher } from '../services/realtime';
 import { isAdmin, type SessionUser } from '../policies';
 import { buildResultLoad } from './vote.use-cases';
 
-export async function isSectionMember(
-  userId: number,
-  sectionId: number
-): Promise<boolean> {
-  return resultsRepo.isSectionMember(userId, sectionId);
-}
-
 // §5.1: en vivo acceden el estudiante habilitado, el docente asignado a la
 // seccion (proyector de aula) y el administrador. Los no miembros, no.
 async function canViewLiveResults(

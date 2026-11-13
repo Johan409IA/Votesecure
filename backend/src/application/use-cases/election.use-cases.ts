@@ -1,15 +1,15 @@
 import { NotFoundError, ForbiddenError, BusinessError } from '../../shared/errors';
+import { logger } from '../../config/logger';
+import { withTransaction } from '../../data/db';
 import * as electionsRepo from '../../data/repositories/election.repo';
 import {
-  isSectionMember,
   getFinalResult,
   listTiedCandidates
 } from '../../data/repositories/result.repo';
-import { listEnrollmentsByStudent } from '../../data/repositories/academic.repo';
 import type { ResultsPublisher } from '../services/realtime';
 import {
   requireCanManageSection,
-  isAdmin,
+  requireSectionAccess,
   type SessionUser
 } from '../policies';
 import { buildResultLoad } from './vote.use-cases';
@@ -61,16 +61,9 @@ export async function listElections(
   user: SessionUser,
   sectionId: number
 ): Promise<electionsRepo.Election[]> {
-  if (isAdmin(user) || user.type === 'docente') {
-    return electionsRepo.listElectionsBySection(sectionId);
-  }
-  const member = await isSectionMember(user.id, sectionId);
-  if (member) {
-    return electionsRepo.listElectionsBySection(sectionId);
-  }
-  return electionsRepo
-    .listElectionsBySection(sectionId)
-    .then((list) => list.filter((election) => election.status === 'cerrada'));
+  // §10: "Miembro / Admin". La pertenencia se decide en el caso de uso.
+  await requireSectionAccess(user, sectionId);
+  return electionsRepo.listElectionsBySection(sectionId);
 }
 
 export async function updateElection(
@@ -158,15 +151,32 @@ export async function closeElection(
 ): Promise<void> {
   const election = await getElection(electionId);
   await requireCanManageSection(user, election.sectionId);
-  await electionsRepo.closeAndPublish(electionId, true);
-  const load = await buildResultLoad(electionId);
-  if (load) {
-    await publisher.publish(electionId, load);
+  // F-005: el cierre y la lectura de la carga viva comparten una sola
+  // transaccion y, por tanto, un mismo snapshot.
+  const load = await withTransaction(async (client) => {
+    await electionsRepo.closeAndPublish(electionId, true, client);
+    return buildResultLoad(electionId, client);
+  });
+  // El cierre ya esta confirmado en la BD: la publicacion en vivo es
+  // best-effort y no debe responder 500 si Realtime esta caido (F-004).
+  try {
+    if (load) {
+      await publisher.publish(electionId, load);
+    }
+    // F-019: al cerrar, los canales de la eleccion dejan de ser necesarios.
+    await publisher.close(electionId);
+  } catch (error) {
+    logger.warn(
+      { electionId, error: String(error) },
+      'No se pudo publicar el cierre en vivo'
+    );
   }
 }
 
-export async function electionDetail(electionId: number) {
+export async function electionDetail(user: SessionUser, electionId: number) {
   const election = await getElection(electionId);
+  // §10: "Miembro / Admin" sin excepciones por estado de la eleccion.
+  await requireSectionAccess(user, election.sectionId);
   const [candidacies, eligibilities] = await Promise.all([
     electionsRepo.listCandidacies(electionId),
     electionsRepo.listEligibilities(electionId)
@@ -180,13 +190,7 @@ export async function activeElectionsForStudent(
   if (user.type !== 'estudiante') {
     throw new ForbiddenError('Solo aplica para estudiantes');
   }
-  const enrollments = await listEnrollmentsByStudent(user.id);
-  const active: electionsRepo.Election[] = [];
-  for (const enrollment of enrollments) {
-    const elections = await electionsRepo.listActiveBySection(enrollment.sectionId);
-    active.push(...elections);
-  }
-  return active;
+  return electionsRepo.listActiveByStudent(user.id);
 }
 
 export async function proclaimDelegate(

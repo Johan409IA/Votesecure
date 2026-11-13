@@ -34,7 +34,9 @@ describe('API HTTP', () => {
         correo: 'juan@gmail.com',
         contrasena: 'una-clave-muy-segura'
       });
-    expect(response.status).toBe(422);
+    // La validacion del formato UTP (Fase 6) rechaza en la capa de entrada.
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('VALIDACION');
   });
 
   it('login con usuario inexistente responde generico', async () => {
@@ -55,6 +57,32 @@ describe('API HTTP', () => {
       .post('/api/auth/logout')
       .set('Cookie', 'votecure_sesion=token-invalido-de-prueba');
     expect(response.status).toBe(403);
+  });
+
+  it('rechaza mutaciones con Origin ajeno al frontend (§2.2)', async () => {
+    const response = await request(app)
+      .post('/api/auth/logout')
+      .set(
+        'Cookie',
+        'votecure_sesion=token-invalido-de-prueba; votecure_csrf=csrf-token-prueba'
+      )
+      .set('X-CSRF-Token', 'csrf-token-prueba')
+      .set('Origin', 'https://ejemplo-malo.example');
+    expect(response.status).toBe(403);
+    expect(response.body.mensaje).toBe('Origen no autorizado');
+  });
+
+  it('acepta mutaciones con Origin del frontend (§2.2)', async () => {
+    const response = await request(app)
+      .post('/api/auth/logout')
+      .set(
+        'Cookie',
+        'votecure_sesion=token-invalido-de-prueba; votecure_csrf=csrf-token-prueba'
+      )
+      .set('X-CSRF-Token', 'csrf-token-prueba')
+      .set('Origin', env.FRONTEND_URL);
+    // El origen coincide y el CSRF tambien: pasa al control de sesion.
+    expect(response.status).toBe(401);
   });
 
   it('rechaza query invalida en elecciones', async () => {
