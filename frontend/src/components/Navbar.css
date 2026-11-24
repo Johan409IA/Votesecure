@@ -1,0 +1,79 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  height: 72px;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  background: #fff;
+  border-bottom: 1px solid #E3E6EF;
+  box-shadow: 0 2px 10px rgba(11, 27, 59, 0.04);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.topbar-marca { display: flex; align-items: center; }
+.topbar-marca img { height: 50px; width: auto; display: block; }
+
+.topbar-enlaces { display: flex; gap: 0.5rem; flex: 1; height: 100%; }
+.topbar-enlaces a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  color: #3D4863;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.topbar-enlaces a:hover { color: #0B1B3B; }
+.topbar-enlaces a.activo { color: #0B1B3B; }
+.topbar-enlaces a.activo::after {
+  content: '';
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #C8102E;
+}
+
+.topbar-usuario { display: flex; align-items: center; gap: 0.8rem; }
+.topbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #FDECEE;
+  color: #C8102E;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.topbar-datos { display: flex; flex-direction: column; line-height: 1.25; }
+.topbar-nombre { color: #0B1B3B; font-weight: 700; font-size: 0.95rem; }
+.topbar-rol { color: #5B6578; font-size: 0.82rem; }
+.topbar-separador { width: 1px; height: 30px; background: #E3E6EF; margin: 0 0.3rem; }
+
+.topbar-salir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.4rem;
+  border: none;
+  background: transparent;
+  color: #3D4863;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.topbar-salir:hover { color: #C8102E; }
+
+@media (max-width: 760px) {
+  .topbar { gap: 0.8rem; height: 64px; }
+  .topbar-marca img { height: 42px; }
+  .topbar-datos, .topbar-separador, .topbar-salir span { display: none; }
+}

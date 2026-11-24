@@ -16,7 +16,7 @@ export default function NotFoundPage() {
         <h1>404</h1>
         <h2>Página no encontrada</h2>
         <p>La dirección que buscas no existe o fue movida.</p>
-        <Link to="/elecciones" className="btn btn-primary">Volver a Elecciones</Link>
+        <Link to="/" className="btn btn-primary">Volver al inicio</Link>
       </div>
     </div>
   );

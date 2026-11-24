@@ -1,0 +1,27 @@
+/* Marco de las pantallas con sesión: fondo, ancho del contenido y pie. */
+.marco {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F5F7FB;
+  color: #0B1B3B;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.marco-contenido {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 2.5rem;
+}
+.marco-pie {
+  background: #fff;
+  border-top: 1px solid #E3E6EF;
+  padding: 1.1rem 1.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #5B6578;
+}
+@media (max-width: 640px) {
+  .marco-contenido { padding: 1.25rem 1rem 2rem; }
+}

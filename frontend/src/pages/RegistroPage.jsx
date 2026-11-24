@@ -1,147 +1,165 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Info, Lock, Mail, User } from 'lucide-react';
+import AuthLayout from '../components/AuthLayout';
 import { useAuth } from '../hooks/useAuth';
-import { useReniec } from '../hooks/useReniec';
-import { listarOrganizacionesPublico } from '../services/eleccion.service';
-import './AuthPages.css';
+
+// Mismas reglas del backend: u... = estudiante, c... = docente.
+const REGEX_CORREO_UTP = /^[uc][a-z0-9._%+-]*@utp\.edu\.pe$/;
+const CONTRASENA_MIN = 15;
+const CONTRASENA_MAX = 128;
+
+function validar(form) {
+  const nombre = form.nombre.trim();
+  if (nombre.length < 3) return 'Escribe tu nombre completo (mínimo 3 letras).';
+  if (nombre.length > 120) return 'El nombre es demasiado largo.';
+  if (!REGEX_CORREO_UTP.test(form.correo.trim().toLowerCase())) {
+    return 'Usa tu correo institucional: estudiante (u…@utp.edu.pe) o docente (c…@utp.edu.pe).';
+  }
+  if (form.contrasena.length < CONTRASENA_MIN) {
+    return `La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres.`;
+  }
+  if (form.contrasena.length > CONTRASENA_MAX) {
+    return `La contraseña no puede superar los ${CONTRASENA_MAX} caracteres.`;
+  }
+  if (form.contrasena !== form.confirmar) return 'Las contraseñas no coinciden.';
+  return '';
+}
 
 export default function RegistroPage() {
   const auth = useAuth();
-  const navigate = useNavigate();
-  const reniec = useReniec();
-
+  const [form, setForm] = useState({ nombre: '', correo: '', contrasena: '', confirmar: '' });
+  const [verContrasena, setVerContrasena] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [cargandoOrgs, setCargandoOrgs] = useState(true);
   const [error, setError] = useState('');
-  const [exito, setExito] = useState('');
-  const [organizaciones, setOrganizaciones] = useState([]);
-  const [dni, setDni] = useState('');
-  const [form, setForm] = useState({ nombre: '', correo: '', password: '', organizacion_id: '' });
+  const [enviado, setEnviado] = useState(false);
 
-  useEffect(() => {
-    listarOrganizacionesPublico()
-      .then(setOrganizaciones)
-      .catch(console.error)
-      .finally(() => setCargandoOrgs(false));
-  }, []);
+  const cambiar = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
 
-  const verificarDni = async () => {
-    const persona = await reniec.verificar(dni);
-    if (persona) {
-      setForm((f) => ({ ...f, nombre: persona.nombreCompleto }));
-    }
-  };
-
-  const registrarse = async () => {
-    if (!reniec.persona) {
-      setError('Primero verifica tu DNI con RENIEC');
+  const registrar = async (e) => {
+    e.preventDefault();
+    const problema = validar(form);
+    if (problema) {
+      setError(problema);
       return;
     }
-    if (!form.nombre || !form.correo || !form.password) {
-      setError('Completa todos los campos');
-      return;
-    }
-    if (!form.organizacion_id) {
-      setError('Debes seleccionar tu organización');
-      return;
-    }
-    setCargando(true);
     setError('');
+    setCargando(true);
     try {
       await auth.registro({
-        ...form,
-        dni: reniec.persona.dni,
-        verificadoReniec: true,
+        nombre: form.nombre.trim(),
+        correo: form.correo.trim().toLowerCase(),
+        contrasena: form.contrasena,
       });
-      navigate('/elecciones');
-    } catch (e) {
-      setError(e.response?.data?.error || 'Error al registrarse');
+      setEnviado(true);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setCargando(false);
     }
   };
 
+  if (enviado) {
+    return (
+      <AuthLayout>
+        <div className="auth-estado">
+          <div className="auth-estado-icono ok"><CheckCircle2 size={34} /></div>
+          <h2>Revisa tu correo</h2>
+          <p className="auth-subtitulo">
+            Si el correo es válido, te enviamos un enlace para verificar tu cuenta. El enlace vence en 24 horas.
+          </p>
+        </div>
+        <Link to="/login" className="auth-boton">
+          Ir a iniciar sesión <ArrowRight size={19} />
+        </Link>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <div className="auth-container">
-      <div className="auth-card card">
-        <div className="auth-header">
-          <div className="auth-escudo">
-            <svg viewBox="0 0 48 48" width="44" height="44">
-              <circle cx="24" cy="24" r="22" fill="none" stroke="#0A1F33" strokeWidth="2" />
-              <path d="M24 10 L34 16 L34 26 Q34 34 24 38 Q14 34 14 26 L14 16 Z" fill="#0A1F33" opacity="0.1" />
-              <path d="M24 10 L34 16 L34 26 Q34 34 24 38 Q14 34 14 26 L14 16 Z" fill="none" stroke="#0A1F33" strokeWidth="1.5" />
-            </svg>
-          </div>
-          <h1>Crear cuenta</h1>
-          <p>Regístrate para participar en votaciones</p>
-        </div>
+    <AuthLayout>
+      <h2>Crear cuenta</h2>
+      <p className="auth-subtitulo">Regístrate con tu correo institucional</p>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {exito && <div className="alert alert-success">{exito}</div>}
+      {error && <div className="auth-alerta error" role="alert">{error}</div>}
 
-        {/* ── Paso 1: Verificación RENIEC ────────────────────────── */}
-        <div className="dni-row">
-          <div className="form-group">
-            <label>DNI</label>
+      <form onSubmit={registrar} noValidate>
+        <div className="auth-grupo">
+          <label htmlFor="nombre">Nombre completo</label>
+          <div className="auth-campo">
+            <User size={19} />
             <input
-              type="text" maxLength={8} placeholder="8 dígitos"
-              value={dni} disabled={!!reniec.persona}
-              onChange={(e) => setDni(e.target.value.replace(/\D/g, ''))}
-            />
-          </div>
-          <button
-            onClick={verificarDni}
-            disabled={reniec.verificando || !!reniec.persona || dni.length !== 8}
-            className="btn btn-outline btn-verificar"
-          >
-            {reniec.verificando ? 'Verificando...' : reniec.persona ? 'Verificado ✓' : 'Verificar con RENIEC'}
-          </button>
-        </div>
-        {reniec.error && <div className="alert alert-error" style={{ marginTop: '.6rem' }}>{reniec.error}</div>}
-        {reniec.persona && (
-          <div className="dni-verificado">✓ Identidad verificada: {reniec.persona.nombreCompleto}</div>
-        )}
-
-        {/* ── Paso 2: Datos de cuenta (solo tras verificar) ───────── */}
-        <div style={{ marginTop: '1.4rem', opacity: reniec.persona ? 1 : 0.45, pointerEvents: reniec.persona ? 'auto' : 'none' }}>
-          <div className="form-group">
-            <label>Nombre completo</label>
-            <input
+              id="nombre"
               type="text"
+              autoComplete="name"
+              placeholder="Nombres y apellidos"
               value={form.nombre}
-              readOnly
-              style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-              placeholder="Se completará automáticamente con tu DNI"
+              onChange={cambiar('nombre')}
             />
           </div>
-          <div className="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" placeholder="tu@correo.com" value={form.correo}
-              onChange={(e) => setForm({ ...form, correo: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Contraseña</label>
-            <input type="password" placeholder="Mínimo 6 caracteres" value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Organización (curso/aula)</label>
-            <select value={form.organizacion_id} onChange={(e) => setForm({ ...form, organizacion_id: e.target.value })}>
-              <option value="">Selecciona tu organización</option>
-              {organizaciones.map((o) => <option key={o._id} value={o._id}>{o.nombre}</option>)}
-            </select>
-            {!cargandoOrgs && organizaciones.length === 0 && (
-              <p className="hint-vacio">Aún no hay organizaciones disponibles. Pide a tu administrador que cree una primero.</p>
-            )}
-          </div>
-
-          <button onClick={registrarse} disabled={cargando} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-            {cargando ? 'Registrando...' : 'Crear cuenta'}
-          </button>
         </div>
 
-        <p className="auth-footer">¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
-      </div>
-    </div>
+        <div className="auth-grupo">
+          <label htmlFor="correo">Correo institucional</label>
+          <div className="auth-campo">
+            <Mail size={19} />
+            <input
+              id="correo"
+              type="email"
+              autoComplete="username"
+              placeholder="correo@utp.edu.pe"
+              value={form.correo}
+              onChange={cambiar('correo')}
+            />
+          </div>
+          <p className="auth-ayuda"><Info size={14} /> Estudiantes: u…@utp.edu.pe · Docentes: c…@utp.edu.pe</p>
+        </div>
+
+        <div className="auth-grupo">
+          <label htmlFor="contrasena">Contraseña</label>
+          <div className="auth-campo con-ojo">
+            <Lock size={19} />
+            <input
+              id="contrasena"
+              type={verContrasena ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Mínimo 15 caracteres"
+              value={form.contrasena}
+              onChange={cambiar('contrasena')}
+            />
+            <button
+              type="button"
+              className="auth-ojo"
+              onClick={() => setVerContrasena(!verContrasena)}
+              aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {verContrasena ? <EyeOff size={19} /> : <Eye size={19} />}
+            </button>
+          </div>
+          <p className="auth-ayuda"><Info size={14} /> Una frase larga es más segura que una clave corta</p>
+        </div>
+
+        <div className="auth-grupo">
+          <label htmlFor="confirmar">Confirmar contraseña</label>
+          <div className="auth-campo">
+            <Lock size={19} />
+            <input
+              id="confirmar"
+              type={verContrasena ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Repite la contraseña"
+              value={form.confirmar}
+              onChange={cambiar('confirmar')}
+            />
+          </div>
+        </div>
+
+        <button type="submit" className="auth-boton" disabled={cargando}>
+          {cargando ? 'Creando cuenta…' : <>Crear cuenta <ArrowRight size={19} /></>}
+        </button>
+      </form>
+
+      <p className="auth-pie">¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+    </AuthLayout>
   );
 }
