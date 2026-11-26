@@ -27,7 +27,7 @@ Un sistema para **elegir al delegado de cada sección académica mediante votaci
 | Tiempo real | Supabase Realtime Broadcast |
 | Pruebas | Vitest (unitarias + integración) |
 
-Comandos (dentro de `backend/`): `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run test:unit`, `npm run test:integracion` (requiere `TEST_DATABASE_URL`), `npm run lint`, `npm run deps:check`, `npm run db:aplicar`, `npm run admin:provisionar`, `npm run smoke`.
+Comandos (dentro de `backend/`): `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run test:unit`, `npm run test:integracion` (requiere `TEST_DATABASE_URL`), `npm run lint`, `npm run deps:check`, `npm run db:aplicar`, `npm run admin:provisionar`, `npm run seed:demo`, `npm run smoke`.
 
 ---
 
@@ -39,7 +39,9 @@ Existen exactamente **tres roles mutuamente excluyentes**. El rol se **deriva de
 - Correo que empieza con `c` (`c...@utp.edu.pe`) → **docente**
 - **Administrador**: nunca se registra por la API pública; se crea solo con la CLI `npm run admin:provisionar` (rol de BD privilegiado `votesecure_provisionamiento`).
 
-Casi todas las funcionalidades exigen además el **correo verificado** (confirmación por enlace enviado con Resend, válida 24 h).
+Casi todas las funcionalidades exigen además el **correo verificado** (confirmación por enlace enviado con Resend, válida 24 h; se puede reenviar con `POST /api/auth/reenviar-verificacion`).
+
+**Datos de demostración:** `npm run seed:demo -- --contrasena <clave de 15+ caracteres>` crea (solo en desarrollo, idempotente) un admin (`admin.demo@votesecureapp.com`), un docente (`c2026001@utp.edu.pe`), 8 estudiantes (`u2026001@utp.edu.pe` … `u2026008@utp.edu.pe`, el 8 sin matricular para probar el auto-matrícula), la sección `SEC-DM25` y una elección ya **activa y lista para votar** (activada con `programar_eleccion` + `activar_eleccion`, sin votos). Todos los correos salen verificados y comparten la contraseña indicada.
 
 ### 3.1 Estudiante — participa
 
@@ -160,7 +162,8 @@ Todas las rutas cuelgan de `/api`. Las mutantes (`POST`, `PATCH`, `DELETE`) exig
 | `POST` | `/api/auth/logout` | Autenticado | Revoca el hash de sesión en BD (efecto inmediato) y limpia cookies. |
 | `POST` | `/api/auth/cambiar-contrasena` | Autenticado | Cambia la contraseña propia; exige la actual; **invalida la sesión vigente** (hay que volver a iniciar sesión). |
 | `GET` | `/api/auth/verificar` | Público | Confirma el correo con `?correo=&token=`; redirige a `FRONTEND_URL/verificar-correo?estado=ok\|error`. |
-| `GET` | `/api/auth/yo` | Autenticado | Devuelve el perfil de sesión: `{ id, nombre, correo, tipo, correoVerificado }`. |
+| `POST` | `/api/auth/reenviar-verificacion` | Público (rate-limit 10/h) | Reenvía el enlace de verificación; respuesta idéntica exista o no la cuenta (sin enumeración) y cooldown de 60 s por cuenta en BD. |
+| `GET` | `/api/auth/yo` | Autenticado | Devuelve el perfil de sesión: `{ id, nombre, correo, tipo, correoVerificado, fotoUrl }` (`fotoUrl` = data URL JPEG o `null`). |
 
 ### 5.2 Secciones y membresías (`section.routes.ts`)
 
@@ -218,6 +221,9 @@ Todas las rutas cuelgan de `/api`. Las mutantes (`POST`, `PATCH`, `DELETE`) exig
 
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
+| `GET` | `/api/usuarios?busqueda=&tipo=` | **Administrador** | Lista y busca cuentas (nombre o correo, filtro por tipo, tope 500); devuelve `{ id, nombre, correo, tipo, correoVerificado, activa }` sin hashes ni fotos. |
+| `POST` | `/api/usuarios/yo/foto` | Autenticado | Guarda la foto de perfil propia: `{ imagen: "data:image/jpeg;base64,..." }` (JPEG base64, máx. 90 000 caracteres); valida además la firma real del JPEG. |
+| `DELETE` | `/api/usuarios/yo/foto` | Autenticado | Elimina la foto de perfil propia. |
 | `PATCH` | `/api/usuarios/:id` | **Administrador** | Activa/desactiva cuentas (`activa`); al desactivar, un trigger de BD revoca la sesión al instante. |
 | `GET` | `/api/auditoria/elecciones/:id` | **Administrador** | Historial inmutable de eventos de la elección (solo lectura). |
 
@@ -231,7 +237,7 @@ Todas las rutas cuelgan de `/api`. Las mutantes (`POST`, `PATCH`, `DELETE`) exig
 
 ## 6. Base de datos (PostgreSQL en Supabase)
 
-Fuentes de verdad: `backend/sql/001_esquema_oficial.sql` (esquema) y `002_operaciones_y_roles.sql` … `008_gestion_usuarios.sql` (migraciones). Convención: tablas, columnas y funciones en **español**. Todas las claves primarias son `bigint` con identidad automática.
+Fuentes de verdad: `backend/sql/001_esquema_oficial.sql` (esquema) y `002_operaciones_y_roles.sql` … `009_foto_y_reenvio_verificacion.sql` (migraciones). Convención: tablas, columnas y funciones en **español**. Todas las claves primarias son `bigint` con identidad automática. `009` añade `usuarios.foto` (data URL JPEG, máx. 90 000 caracteres) y las funciones `SECURITY DEFINER` `actualizar_foto_usuario` y `regenerar_verificacion` (con cooldown de 60 s). Para aplicar solo una migración: `npm run db:aplicar -- --solo 009_foto_y_reenvio_verificacion.sql` (la aplicación completa no es idempotente).
 
 ### 6.1 Diagrama de relaciones (resumen)
 
@@ -483,6 +489,32 @@ Así funciona la difusión en vivo de resultados:
 
 5. **Limpieza**: al cerrarse una elección se retiran sus canales, y los canales de ventanas vencidas se purgan periódicamente para no acumular suscripciones.
 
+### 7.1 Cómo se conecta el frontend (leer antes de implementar resultados en vivo)
+
+- **No se usan WebSockets propios ni `socket.io`**: el backend no abre ningún servidor de WebSocket, así que un `io(...)` nunca recibiría nada. La única vía es **Supabase Realtime** con `@supabase/supabase-js` (ya está en las dependencias del frontend).
+- El frontend se suscribe con la **anon key** (`VITE_SUPABASE_ANON_KEY`), no con la `service_role`: esa clave es exclusiva del backend y jamás debe acabar en un `.env` con prefijo `VITE_` (quedaría incrustada en el JavaScript del navegador y da acceso total a la base).
+- El canal **rota cada minuto** porque su nombre lleva el ticket HMAC. El frontend debe llamar de nuevo a `POST /api/resultados/:id/suscripcion` **antes** de `expiraEn` y volver a suscribirse al canal nuevo; si se queda escuchando el canal viejo, deja de recibir eventos (el backend solo publica en la ventana actual y la anterior).
+- El evento broadcast se llama `resultado`; el payload es el JSON de arriba. Antes del primer evento conviene renderizar el snapshot de `GET /api/elecciones/:id/resultados` (mismo payload).
+
+Esquema de referencia:
+
+```js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+let canalActual = null;
+
+async function suscribirResultados(eleccionId, alRecibir) {
+  const { canal, expiraEn } = await api.post(`/resultados/${eleccionId}/suscripcion`);
+  if (canalActual) await supabase.removeChannel(canalActual);
+  canalActual = supabase.channel(canal);
+  canalActual.on('broadcast', { event: 'resultado' }, ({ payload }) => alRecibir(payload)).subscribe();
+  // Renovar el ticket unos segundos antes de que venza la ventana de 60 s.
+  const msRestante = expiraEn * 1000 - Date.now();
+  setTimeout(() => suscribirResultados(eleccionId, alRecibir), Math.max(msRestante - 5000, 1000));
+}
+```
+
 ## 8. Planificador electoral (scheduler)
 
 `ElectionScheduler` (`application/services/scheduler.ts`) corre en el propio backend en un intervalo configurable y, en cada ciclo, ejecuta **una sola consulta** que devuelve:
@@ -514,19 +546,34 @@ Así el cierre automático por horario del §6.1 ocurre sin intervención humana
 | `NODE_ENV` | Sí | `development` / `production` / `test`. |
 | `FRONTEND_URL` | Sí | Origen exacto permitido por CORS; debe ser HTTPS en producción. |
 | `DATABASE_API_URL` | Sí | Cadena de conexión al pooler de Supabase (rol `votesecure_api`). |
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Sí | Cliente Realtime para publicar resultados. |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Sí | Cliente Realtime para publicar resultados. La `service_role` es **exclusiva del backend**; el frontend solo recibe la anon key como `VITE_SUPABASE_ANON_KEY` y la URL como `VITE_SUPABASE_URL` (§7.1). |
 | `REALTIME_CANAL_SECRETO` | Sí (mín. 32 chars) | Secreto HMAC de los tickets de canal. |
 | `SESION_TTL_HORAS` | No (default 8, máx. 168) | Vida de la cookie de sesión. |
 | `STATEMENT_TIMEOUT_MS` | No (default 10000) | Timeout de consultas por transacción. |
 | `TRUST_PROXY_HOPS` | No (default 0) | Saltos de proxy inverso (1 en Render); jamás `true`. |
 | `RESEND_API_KEY` | Sí en producción | Envío de correos de verificación. |
 | `REMITENTE_CORREO` | No (default `seguridad@votesecureapp.com`) | Remitente de los correos. |
+| `CORREO_REAL_EN_LOCAL` | No (default `false`) | `true` envía correos reales con Resend en desarrollo (exige `RESEND_API_KEY`). Se ignora en producción (siempre hay correo real) y en `test` nunca se envía. |
 
-En `development` existe un bypass de verificación: el enlace de confirmación se imprime en la consola del backend en lugar de enviarse por correo.
+En `development` existe un bypass de verificación: el enlace de confirmación se imprime en la consola del backend en lugar de enviarse por correo (salvo `CORREO_REAL_EN_LOCAL=true`, pensado para probar Resend antes de desplegar; como el registro solo acepta `@utp.edu.pe`, se necesita un correo UTP real al que tengas acceso).
 
 ---
 
-## 11. Glosario rápido
+## 11. Guía de integración con el frontend
+
+Reglas que no son obvias y evitan horas de depuración:
+
+- **Autenticación por cookies, no tokens**: el frontend no guarda nada en `localStorage`; el navegador envía las cookies (`votecure_sesion` HttpOnly, `votecure_csrf` legible) y cada petición mutante debe añadir la cabecera `X-CSRF-Token` con el valor de la cookie CSRF (*double-submit*). El cliente `services/api.js` del frontend ya lo hace: reutilizarlo, no recrear `axios` ni `socket.io`.
+- **Mismo origen**: en desarrollo Vite redirige `/api` al backend (puerto 5173 → 3000, con `strictPort`); en producción frontend y backend deben vivir **bajo el mismo dominio** o las cookies no viajan. El backend valida además que la cabecera `Origin` coincida exactamente con `FRONTEND_URL` — si Vite sube a otro puerto, el login falla con 403 `Origen no autorizado`.
+- **Errores**: toda respuesta de error es `{ error, mensaje }` (§5); mostrar `mensaje` al usuario y usar `error` para lógica (p. ej. `PROHIBIDO` → pantalla de "no habilitado").
+- **Correo no verificado**: `Mis cursos` y casi todo lo demás exige correo verificado (`requireVerified`); el frontend debe portillar con `usuario.correoVerificado` y ofrecer `POST /api/auth/reenviar-verificacion` (respuesta idéntica exista o no la cuenta; rate-limit 10/h).
+- **Foto de perfil**: `POST /api/usuarios/yo/foto` con `{ imagen: "data:image/jpeg;base64,..." }` (JPEG real, ≤ 90 000 caracteres en total, se valida la firma del archivo) y `DELETE /api/usuarios/yo/foto` para quitarla. La foto vuelve como `fotoUrl` (data URL o `null`) en `GET /api/auth/yo` y en cada candidatura de `GET /api/elecciones/:id`; **no** se incluye en listados (`/api/usuarios`, `/api/secciones`, etc.) para no inflarlos.
+- **Listado de cuentas**: `GET /api/usuarios?busqueda=&tipo=` es **solo administrador**, tope 500 filas, sin hashes ni fotos.
+- **Rate limits que afectan las pruebas**: login 20/15 min, registro 10/h, unirse 10/h, reenvío 10/h — no martillar endpoints en bucle desde el frontend.
+- **Variables del frontend**: solo `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `frontend/.env.local` (plantilla en `frontend/.env.example`). Jamás la `service_role`. Sin backend local no hace falta nada más: el cliente API usa rutas relativas.
+- **Datos de prueba**: `npm run seed:demo -- --contrasena <clave 15+>` (§2) crea la sección `SEC-DM25` con una elección activa y cuentas verificadas para probar registro→matrícula→voto→resultados sin esperar correos.
+
+## 12. Glosario rápido
 
 - **Padrón congelado**: copia de las matrículas activas en `habilitaciones_voto`, creada al activar la elección; no admite cambios posteriores.
 - **Situación**: resultado derivado de la instantánea publicada: `ganador`, `empate` o `sin_votos`.

@@ -172,6 +172,7 @@ export interface Candidacy {
   studentId: number;
   studentName: string;
   studentEmail: string;
+  photoUrl: string | null;
 }
 
 interface CandidacyRow {
@@ -181,6 +182,7 @@ interface CandidacyRow {
   estudiante_id: string;
   nombre_estudiante: string;
   correo_estudiante: string;
+  foto_estudiante?: string | null;
 }
 
 function mapCandidacy(row: CandidacyRow): Candidacy {
@@ -190,12 +192,16 @@ function mapCandidacy(row: CandidacyRow): Candidacy {
     enrollmentId: Number(row.matricula_id),
     studentId: Number(row.estudiante_id),
     studentName: row.nombre_estudiante,
-    studentEmail: row.correo_estudiante
+    studentEmail: row.correo_estudiante,
+    photoUrl: row.foto_estudiante ?? null
   };
 }
 
+// La foto (base64, hasta 90 000 caracteres) solo se lee para el detalle de
+// eleccion; nunca en listados ni en escrituras.
 const CANDIDACY_SELECT = `SELECT c.id, c.eleccion_id, c.matricula_id,
-  m.estudiante_id, u.nombre AS nombre_estudiante, u.correo AS correo_estudiante
+  m.estudiante_id, u.nombre AS nombre_estudiante, u.correo AS correo_estudiante,
+  u.foto AS foto_estudiante
   FROM candidaturas c
   JOIN matriculas m ON m.id = c.matricula_id
   JOIN usuarios u ON u.id = m.estudiante_id`;

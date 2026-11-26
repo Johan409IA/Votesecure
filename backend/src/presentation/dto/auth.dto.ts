@@ -32,6 +32,22 @@ export const loginSchema = z.object({
   contrasena: z.string().min(1)
 });
 
+// Reenvio del enlace: mismas reglas que el registro (correo institucional
+// UTP); la respuesta de la ruta no distingue cuentas existentes.
+export const resendVerificationSchema = z.object({
+  correo: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3)
+    .max(254)
+    .pipe(z.email())
+    .refine((value) => deriveUserTypeFromEmail(value) !== null, {
+      message:
+        'El correo debe ser institucional UTP: estudiante (u...@utp.edu.pe) o docente (c...@utp.edu.pe)'
+    })
+});
+
 export const cambiarContrasenaSchema = z.object({
   contrasenaActual: z.string().min(1),
   contrasenaNueva: z

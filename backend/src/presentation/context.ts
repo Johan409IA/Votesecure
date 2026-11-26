@@ -13,7 +13,12 @@ export interface ApiContext {
 export function createContext(env: ServerEnv): ApiContext {
   return {
     env,
-    mail: createMailAdapter(env.RESEND_API_KEY, env.REMITENTE_CORREO, env.NODE_ENV),
+    mail: createMailAdapter(
+      env.RESEND_API_KEY,
+      env.REMITENTE_CORREO,
+      env.NODE_ENV,
+      env.CORREO_REAL_EN_LOCAL
+    ),
     publisher: new Publisher(
       env.SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY,

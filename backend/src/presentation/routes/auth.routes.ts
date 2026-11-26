@@ -4,11 +4,12 @@ import * as auth from '../../application/use-cases/auth.use-cases';
 import * as userUseCases from '../../application/use-cases/user.use-cases';
 import { authenticate } from '../middleware/session';
 import { validate, validateData } from '../middleware/validate';
-import { loginRateLimit, registerRateLimit } from '../middleware/rate-limits';
+import { loginRateLimit, registerRateLimit, resendVerificationRateLimit } from '../middleware/rate-limits';
 import {
   cambiarContrasenaSchema,
   loginSchema,
   registerSchema,
+  resendVerificationSchema,
   verifyQuerySchema
 } from '../dto/auth.dto';
 import type { ApiContext } from '../context';
@@ -53,6 +54,24 @@ export function createAuthRoutes(ctx: ApiContext): Router {
       next(error);
     }
   });
+
+  // Reenvio del enlace de verificacion. La respuesta es identica exista o no
+  // la cuenta (sin enumeracion); el rate limit por IP va primero.
+  router.post(
+    '/auth/reenviar-verificacion',
+    resendVerificationRateLimit,
+    validate(resendVerificationSchema),
+    async (req, res, next) => {
+      try {
+        await auth.resendVerification(req.body.correo, ctx.mail, ctx.env.FRONTEND_URL);
+        res.json({
+          mensaje: 'Si la cuenta existe y no esta verificada, recibiras un nuevo enlace'
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 
   router.post('/auth/login', loginRateLimit, validate(loginSchema), async (req, res, next) => {
     try {
@@ -127,8 +146,13 @@ export function createAuthRoutes(ctx: ApiContext): Router {
     }
   });
 
-  router.get('/auth/yo', authenticate, (req, res) => {
-    res.json({ usuario: toPublicUser(req.user!) });
+  router.get('/auth/yo', authenticate, async (req, res, next) => {
+    try {
+      const fotoUrl = await userUseCases.getOwnPhoto(req.user!);
+      res.json({ usuario: { ...toPublicUser(req.user!), fotoUrl } });
+    } catch (error) {
+      next(error);
+    }
   });
 
   return router;

@@ -1,4 +1,5 @@
 import { UnauthenticatedError, BusinessError } from '../../shared/errors';
+import { logger } from '../../config/logger';
 import * as usersRepo from '../../data/repositories/user.repo';
 import {
   PASSWORD_LIMITS,
@@ -23,6 +24,11 @@ const VERIFICATION_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
 const GENERIC_MESSAGE = 'Credenciales invalidas';
+
+// Enlace de verificacion comun para el registro y el reenvio.
+function buildVerificationLink(frontendUrl: string, email: string, token: string): string {
+  return `${frontendUrl}/verificar-correo?correo=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+}
 
 interface LoginAttempts {
   failures: number;
@@ -84,8 +90,35 @@ export async function registerUser(
     verificationExpiresAt: new Date(Date.now() + VERIFICATION_EXPIRATION_MS)
   });
 
-  const link = `${frontendUrl}/verificar-correo?correo=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(token)}`;
+  const link = buildVerificationLink(frontendUrl, normalizedEmail, token);
   await mail.sendVerification(normalizedEmail, link);
+}
+
+// Reenvio del enlace de verificacion. Sin errores discernibles: la respuesta
+// de la ruta es siempre la misma y un fallo de Resend se registra y no se
+// propaga, para no revelar si la cuenta existe.
+export async function resendVerification(
+  email: string,
+  mail: MailAdapter,
+  frontendUrl: string
+): Promise<void> {
+  const normalizedEmail = normalizeEmail(email);
+  const { token, hash: verificationHash } = generateVerificationToken();
+  const rotated = await usersRepo.regenerateVerification(
+    normalizedEmail,
+    verificationHash,
+    new Date(Date.now() + VERIFICATION_EXPIRATION_MS)
+  );
+  if (!rotated) return;
+  const link = buildVerificationLink(frontendUrl, normalizedEmail, token);
+  try {
+    await mail.sendVerification(normalizedEmail, link);
+  } catch (error) {
+    logger.error(
+      { err: error },
+      'Resend no pudo enviar el reenvio de verificacion (se omite para no revelar la existencia de la cuenta)'
+    );
+  }
 }
 
 export async function verifyEmail(

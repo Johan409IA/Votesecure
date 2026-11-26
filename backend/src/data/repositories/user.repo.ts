@@ -170,3 +170,106 @@ export async function confirmEmail(
     return result.rows[0]?.confirmar_correo === true;
   });
 }
+
+// GET /usuarios: resumen para el administrador. Nunca incluye hash_contrasena,
+// sesion_hash, verificacion_hash ni foto.
+export interface UserSummary {
+  id: number;
+  name: string;
+  email: string;
+  userType: UserType;
+  active: boolean;
+  emailVerified: boolean;
+}
+
+interface UserSummaryRow {
+  id: string;
+  nombre: string;
+  correo: string;
+  tipo_usuario: string;
+  activo: boolean;
+  correo_verificado: boolean;
+}
+
+const SUMMARY_COLUMNS = `id, nombre, correo, tipo_usuario, activo,
+  correo_verificado_en IS NOT NULL AS correo_verificado`;
+
+const LIST_LIMIT = 500;
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+function mapUserSummary(row: UserSummaryRow): UserSummary {
+  return {
+    id: Number(row.id),
+    name: row.nombre,
+    email: row.correo,
+    userType: row.tipo_usuario as UserType,
+    active: row.activo,
+    emailVerified: row.correo_verificado
+  };
+}
+
+export async function listUsers(filters: {
+  search?: string;
+  type?: UserType;
+}): Promise<UserSummary[]> {
+  return withTransaction(async (client) => {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (filters.search) {
+      params.push(`%${escapeLike(filters.search)}%`);
+      conditions.push(
+        `(nombre ILIKE $${params.length} ESCAPE '\\' OR correo ILIKE $${params.length} ESCAPE '\\')`
+      );
+    }
+    if (filters.type) {
+      params.push(filters.type);
+      conditions.push(`tipo_usuario = $${params.length}`);
+    }
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    params.push(LIST_LIMIT);
+    const result = await client.query<UserSummaryRow>(
+      `SELECT ${SUMMARY_COLUMNS} FROM usuarios ${where} ORDER BY nombre LIMIT $${params.length}`,
+      params
+    );
+    return result.rows.map(mapUserSummary);
+  });
+}
+
+// Foto de perfil via funciones SECURITY DEFINER (sql/009); el rol API no
+// tiene UPDATE sobre usuarios. La foto se lee aparte de COLUMNS para no
+// arrastrarla a cada request autenticado.
+export async function setPhoto(userId: number, photo: string | null): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query('SELECT actualizar_foto_usuario($1, $2)', [userId, photo]);
+  });
+}
+
+export async function getPhoto(userId: number): Promise<string | null> {
+  return withTransaction(async (client) => {
+    const result = await client.query<{ foto: string | null }>(
+      'SELECT foto FROM usuarios WHERE id = $1',
+      [userId]
+    );
+    return result.rows[0]?.foto ?? null;
+  });
+}
+
+// Reenvio de verificacion via regenerar_verificacion (sql/009): rota el token
+// solo si la cuenta existe, esta activa y sin verificar, y respeta el cooldown
+// de 60 s aplicado en la BD.
+export async function regenerateVerification(
+  email: string,
+  verificationHash: Buffer,
+  verificationExpiresAt: Date
+): Promise<boolean> {
+  return withTransaction(async (client) => {
+    const result = await client.query<{ regenerar_verificacion: boolean }>(
+      'SELECT regenerar_verificacion($1, $2, $3) AS regenerar_verificacion',
+      [email, verificationHash, verificationExpiresAt]
+    );
+    return result.rows[0]?.regenerar_verificacion === true;
+  });
+}

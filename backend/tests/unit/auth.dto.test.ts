@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { registerSchema, loginSchema } from '../../src/presentation/dto/auth.dto';
+import {
+  loginSchema,
+  registerSchema,
+  resendVerificationSchema
+} from '../../src/presentation/dto/auth.dto';
 
 describe('validacion de registro', () => {
   const base = {
@@ -54,5 +58,25 @@ describe('validacion de login', () => {
 
   it('rechaza contrasena vacia', () => {
     expect(() => loginSchema.parse({ correo: 'u20231234@utp.edu.pe', contrasena: '' })).toThrow();
+  });
+});
+
+describe('validacion de reenvio de verificacion', () => {
+  it('acepta un correo institucional UTP', () => {
+    expect(
+      resendVerificationSchema.parse({ correo: 'u20231234@utp.edu.pe' })
+    ).toBeTruthy();
+  });
+
+  it('rechaza correos no institucionales (sin enumeracion no hay excepciones)', () => {
+    expect(() =>
+      resendVerificationSchema.parse({ correo: 'alguien@gmail.com' })
+    ).toThrow();
+    expect(() => resendVerificationSchema.parse({ correo: 'no-es-correo' })).toThrow();
+  });
+
+  it('normaliza el correo a minusculas', () => {
+    const result = resendVerificationSchema.parse({ correo: 'U20231234@UTP.EDU.PE' });
+    expect(result.correo).toBe('u20231234@utp.edu.pe');
   });
 });

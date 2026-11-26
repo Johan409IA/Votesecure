@@ -21,9 +21,25 @@ const serverSchema = z
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().min(1).optional()
     ),
-    REMITENTE_CORREO: z.string().trim().pipe(z.email()).default('seguridad@votesecureapp.com')
+    REMITENTE_CORREO: z.string().trim().pipe(z.email()).default('seguridad@votesecureapp.com'),
+    // Interruptor opcional para enviar correo real con Resend en desarrollo
+    // (punto 7 opcional del manual). Nunca aplica en production (alli siempre
+    // hay correo real) ni en test (las pruebas nunca envian correos).
+    CORREO_REAL_EN_LOCAL: z
+      .preprocess(
+        (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+        z.enum(['true', 'false']).default('false')
+      )
+      .transform((value) => value === 'true')
   })
   .superRefine((env, ctx) => {
+    if (env.CORREO_REAL_EN_LOCAL && !env.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'CORREO_REAL_EN_LOCAL=true exige RESEND_API_KEY',
+        path: ['RESEND_API_KEY']
+      });
+    }
     if (env.NODE_ENV !== 'production') return;
     if (!env.RESEND_API_KEY) {
       ctx.addIssue({

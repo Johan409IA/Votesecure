@@ -3,8 +3,11 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 
 async function main(): Promise<void> {
+  // --url <cadena>: conexion alternativa (p. ej. el host directo para
+  // migraciones); por defecto DATABASE_URL y luego DATABASE_API_URL.
+  const urlIndex = process.argv.indexOf('--url');
   const connectionString =
-    process.argv[2] ??
+    (urlIndex !== -1 ? process.argv[urlIndex + 1] : undefined) ??
     process.env['DATABASE_URL'] ??
     process.env['DATABASE_API_URL'];
   if (!connectionString) {
@@ -13,9 +16,18 @@ async function main(): Promise<void> {
   }
 
   const sqlFolder = join(__dirname, '..', '..', 'sql');
+  // --solo <archivo>: aplica un unico archivo (para migraciones puntuales;
+  // la aplicacion completa no es idempotente).
+  const soloIndex = process.argv.indexOf('--solo');
+  const solo = soloIndex !== -1 ? process.argv[soloIndex + 1] : undefined;
   const files = (await readdir(sqlFolder))
     .filter((name) => name.endsWith('.sql'))
+    .filter((name) => !solo || name === solo)
     .sort();
+  if (solo && !files.includes(solo)) {
+    console.error(`No existe el archivo ${solo} en ${sqlFolder}`);
+    process.exit(1);
+  }
 
   const pool = new Pool({ connectionString, max: 1 });
   try {

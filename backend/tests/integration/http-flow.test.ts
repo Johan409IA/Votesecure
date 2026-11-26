@@ -210,6 +210,12 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
         .set('X-CSRF-Token', session.csrf)
         .send(body);
 
+    const del = (session: Session, path: string) =>
+      request(app)
+        .delete(path)
+        .set('Cookie', session.cookie)
+        .set('X-CSRF-Token', session.csrf);
+
     const get = (session: Session, path: string) =>
       request(app).get(path).set('Cookie', session.cookie);
 
@@ -1086,6 +1092,96 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
         .post('/api/auth/login')
         .send({ correo: 'u.fase9.alumno1@utp.edu.pe', contrasena: 'una-clave-nueva-muy-segura' });
       expect(relogin.status).toBe(200);
+    });
+
+    it('la foto de perfil se guarda, se lee en /auth/yo y se elimina', async () => {
+      // Un docente si puede; s1 quedo sin sesion tras cambiar contrasena.
+      const jpeg = 'data:image/jpeg;base64,/9j/4AAQ';
+      expect(
+        (await post(sessions.teacher, '/api/usuarios/yo/foto', { imagen: jpeg })).status
+      ).toBe(201);
+
+      const yo = await get(sessions.teacher, '/api/auth/yo');
+      expect(yo.status).toBe(200);
+      expect(yo.body.usuario.fotoUrl).toBe(jpeg);
+
+      // PNG rechazado por formato, firma no-JPEG rechazada en el caso de uso
+      // y exceso de 90 000 caracteres rechazado por el tope.
+      expect(
+        (
+          await post(sessions.teacher, '/api/usuarios/yo/foto', {
+            imagen: 'data:image/png;base64,iVBORw0KGgo'
+          })
+        ).status
+      ).toBe(400);
+      expect(
+        (
+          await post(sessions.teacher, '/api/usuarios/yo/foto', {
+            imagen: 'data:image/jpeg;base64,SG9sYQ=='
+          })
+        ).status
+      ).toBe(400);
+      expect(
+        (
+          await post(sessions.teacher, '/api/usuarios/yo/foto', {
+            imagen: 'data:image/jpeg;base64,' + 'A'.repeat(90_001)
+          })
+        ).status
+      ).toBe(400);
+
+      // Los candidatos del detalle exponen fotoUrl (null sin foto).
+      const detail = await get(sessions.teacher, `/api/elecciones/${election1}`);
+      expect(detail.status).toBe(200);
+      for (const candidacy of detail.body.candidacies) {
+        expect(candidacy.photoUrl ?? null).toBe(null);
+      }
+
+      expect((await del(sessions.teacher, '/api/usuarios/yo/foto')).status).toBe(200);
+      const yoFinal = await get(sessions.teacher, '/api/auth/yo');
+      expect(yoFinal.status).toBe(200);
+      expect(yoFinal.body.usuario.fotoUrl).toBe(null);
+    });
+
+    it('el listado de cuentas es del administrador y no expone campos sensibles', async () => {
+      expect((await get(sessions.s2, '/api/usuarios')).status).toBe(403);
+      expect((await get(sessions.teacher, '/api/usuarios')).status).toBe(403);
+
+      const all = await get(sessions.admin, '/api/usuarios');
+      expect(all.status).toBe(200);
+      expect(all.body.usuarios.length).toBeGreaterThan(0);
+      for (const usuario of all.body.usuarios) {
+        expect(Object.keys(usuario).sort()).toEqual(
+          ['activa', 'correo', 'correoVerificado', 'id', 'nombre', 'tipo'].sort()
+        );
+      }
+
+      const filtered = await get(
+        sessions.admin,
+        '/api/usuarios?busqueda=fase9.docente&tipo=docente'
+      );
+      expect(filtered.status).toBe(200);
+      expect(filtered.body.usuarios.length).toBe(1);
+      expect(filtered.body.usuarios[0].correo).toBe('c.fase9.docente@utp.edu.pe');
+      expect(filtered.body.usuarios[0].correoVerificado).toBe(true);
+      expect(filtered.body.usuarios[0].activa).toBe(true);
+    });
+
+    it('el reenvio de verificacion responde igual exista o no la cuenta', async () => {
+      const existente = await request(app)
+        .post('/api/auth/reenviar-verificacion')
+        .send({ correo: 'u.fase9.alumno2@utp.edu.pe' });
+      const inexistente = await request(app)
+        .post('/api/auth/reenviar-verificacion')
+        .send({ correo: 'u.nadie@utp.edu.pe' });
+      expect(existente.status).toBe(200);
+      expect(inexistente.status).toBe(200);
+      expect(existente.body).toEqual(inexistente.body);
+
+      // Un correo no institucional se rechaza en validacion.
+      const externo = await request(app)
+        .post('/api/auth/reenviar-verificacion')
+        .send({ correo: 'alguien@gmail.com' });
+      expect(externo.status).toBe(400);
     });
   }
 );
