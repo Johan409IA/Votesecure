@@ -553,8 +553,8 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
       const final = await get(sessions.s1, `/api/elecciones/${election1}/resultados`);
       expect(final.status).toBe(200);
       expect(final.body.tipo).toBe('final');
-      expect(final.body.situation).toBe('ganador');
-      expect(final.body.winnerCandidacyId).toBe(candidacy2);
+      expect(final.body.situacion).toBe('ganador');
+      expect(final.body.ganadorCandidaturaId).toBe(candidacy2);
 
       const summary = await asAdmin(
         `SELECT situacion FROM resumen_resultados_publicados WHERE eleccion_id = $1`,

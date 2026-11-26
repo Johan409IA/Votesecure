@@ -399,7 +399,7 @@ class Smoke {
       teacher
     );
     this.check(results.body.tipo === 'final', 'resultados definitivos', results.body.tipo);
-    this.check(results.body.situation === 'ganador', 'situacion', results.body.situation);
+    this.check(results.body.situacion === 'ganador', 'situacion', results.body.situacion);
     this.report('cierre manual anticipado con ganador unico publicado');
   }
 

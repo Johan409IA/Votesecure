@@ -16,6 +16,7 @@
     "db:aplicar": "tsx --env-file=.env scripts/db/apply-sql.ts",
     "admin:provisionar": "tsx --env-file=.env scripts/provision-admin.ts",
     "seed:demo": "tsx --env-file=.env scripts/dev/seed-demo.ts",
+    "demo:limpiar": "tsx --env-file=.env scripts/dev/clean-demo.ts",
     "smoke": "tsx --env-file=.env scripts/dev/verify-flow.ts"
   },
   "dependencies": {

@@ -38,6 +38,33 @@ const electionAndEligibilityParam = z.object({
 });
 const sectionQuery = z.object({ seccionId: positiveInt });
 
+// Claves JSON de la respuesta final según el contrato §10 (español); las
+// claves del repositorio quedan en inglés en la capa de datos.
+function serializarResultadoFinal(final: {
+  electionId: number;
+  totalEligible: number;
+  totalParticipants: number;
+  participationPercentage: number;
+  situation: string;
+  winnerCandidacyId: number | null;
+  candidacies: Array<{ candidacyId: number; name: string; votes: number }>;
+}) {
+  return {
+    tipo: 'final' as const,
+    eleccionId: final.electionId,
+    totalHabilitados: final.totalEligible,
+    totalParticipantes: final.totalParticipants,
+    porcentajeParticipacion: final.participationPercentage,
+    situacion: final.situation,
+    ganadorCandidaturaId: final.winnerCandidacyId,
+    candidaturas: final.candidacies.map((c) => ({
+      candidaturaId: c.candidacyId,
+      nombre: c.name,
+      votos: c.votes
+    }))
+  };
+}
+
 export function createElectionRoutes(ctx: ApiContext): Router {
   const router = Router();
 
@@ -252,7 +279,10 @@ export function createElectionRoutes(ctx: ApiContext): Router {
     async (req, res, next) => {
       try {
         const { id } = validateData(idParam, req.params);
-        res.json(await resultUseCases.getResults(req.user!, id));
+        const resultado = await resultUseCases.getResults(req.user!, id);
+        res.json(
+          resultado.tipo === 'final' ? serializarResultadoFinal(resultado) : resultado
+        );
       } catch (error) {
         next(error);
       }
