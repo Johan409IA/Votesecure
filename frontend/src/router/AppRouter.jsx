@@ -9,6 +9,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import ProximamentePage from '../pages/ProximamentePage';
 import RegistroPage from '../pages/RegistroPage';
 import VerificarCorreoPage from '../pages/VerificarCorreoPage';
+import CandidatosPage from '../pages/CandidatosPage';
 
 export default function AppRouter() {
   return (
@@ -23,8 +24,7 @@ export default function AppRouter() {
       <Route path="/cursos" element={<RutaProtegida><MisCursosPage /></RutaProtegida>} />
       <Route path="/cursos/:id" element={<RutaProtegida><CursoPage /></RutaProtegida>} />
 
-      {/* Pantallas por construir: candidatos/votar y resultados en vivo */}
-      <Route path="/cursos/:id/votar" element={<RutaProtegida><ProximamentePage /></RutaProtegida>} />
+      <Route path="/cursos/:id/votar" element={<RutaProtegida><CandidatosPage /></RutaProtegida>} />
       <Route path="/cursos/:id/resultados" element={<RutaProtegida><ProximamentePage /></RutaProtegida>} />
 
       <Route path="*" element={<NotFoundPage />} />
