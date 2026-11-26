@@ -1,0 +1,162 @@
+/* Ventanas "Confirma tu voto" y "Voto registrado con éxito".
+   Autocontenido: no depende de Cursos.css, así que puede usarse en cualquier página. */
+.mv-fondo {
+  --mv-rojo: #C8102E;
+  --mv-rojo-osc: #A50D26;
+  --mv-rojo-suave: #FDECEE;
+  --mv-tinta: #0B1B3B;
+  --mv-gris: #5B6578;
+  --mv-borde: #E3E6EF;
+  --mv-verde: #1C7A4E;
+  --mv-verde-suave: #E4F5EC;
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(11, 27, 59, 0.45);
+  backdrop-filter: blur(3px);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--mv-tinta);
+}
+.mv-modal {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 2rem 2.2rem 1.8rem;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(11, 27, 59, 0.3);
+}
+.mv-modal h2 { margin: 0; font-family: inherit; color: var(--mv-tinta); }
+.mv-modal p { margin: 0; }
+
+/* ── Confirma tu voto ─────────────────────────────────────── */
+.mv-paso { font-size: 0.85rem; color: var(--mv-gris); }
+.mv-paso b { color: var(--mv-rojo); font-weight: 700; }
+.mv-cerrar {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  display: flex;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mv-gris);
+  cursor: pointer;
+}
+.mv-cerrar:hover { background: #EEF1F7; }
+.mv-cerrar:disabled { opacity: 0.4; cursor: not-allowed; }
+.mv-titulo { margin-top: 0.9rem !important; font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+.mv-sub { margin-top: 0.55rem !important; color: var(--mv-gris); font-size: 1.02rem; }
+
+.mv-candidato {
+  display: flex;
+  align-items: center;
+  gap: 1.3rem;
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.3rem;
+  background: #F5F7FC;
+  border: 1px solid var(--mv-borde);
+  border-radius: 14px;
+}
+.mv-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FBE3E7, #F4B9C2);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.18);
+  color: var(--mv-rojo);
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+.mv-candidato-datos { min-width: 0; }
+.mv-candidato-nombre { font-size: 1.35rem; font-weight: 800; overflow-wrap: anywhere; }
+.mv-candidato-rol { margin-top: 0.3rem !important; color: var(--mv-gris); font-weight: 700; font-size: 1rem; }
+.mv-candidato-curso { margin-top: 0.3rem !important; color: var(--mv-gris); font-size: 0.92rem; }
+
+.mv-alerta {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1.1rem;
+  padding: 0.95rem 1.1rem;
+  background: var(--mv-rojo-suave);
+  border: 1px solid #F6C3CB;
+  border-radius: 12px;
+  color: #8A0F22;
+  font-size: 0.97rem;
+  line-height: 1.4;
+}
+.mv-alerta svg { flex: none; color: var(--mv-rojo); }
+.mv-error { background: #fff; border-color: var(--mv-rojo); font-weight: 600; }
+.mv-nota { margin-top: 1rem !important; color: var(--mv-gris); font-size: 0.9rem; }
+
+.mv-acciones { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.4rem; }
+.mv-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 48px;
+  min-width: 130px;
+  padding: 0 1.5rem;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mv-boton:disabled { opacity: 0.6; cursor: not-allowed; }
+.mv-boton-rojo { background: var(--mv-rojo); color: #fff; box-shadow: 0 8px 18px rgba(200, 16, 46, 0.25); }
+.mv-boton-rojo:hover:not(:disabled) { background: var(--mv-rojo-osc); }
+.mv-boton-claro { background: #fff; color: var(--mv-tinta); border-color: #D9DEEA; }
+.mv-boton-claro:hover:not(:disabled) { border-color: #B9C1D4; }
+
+/* ── Voto registrado con éxito ────────────────────────────── */
+.mv-exito { max-width: 540px; padding: 2.6rem 2.4rem 2.2rem; text-align: center; }
+.mv-exito-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--mv-verde-suave);
+  color: #12A06B;
+}
+.mv-exito-aro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border: 3.5px solid currentColor;
+  border-radius: 50%;
+}
+.mv-exito h2 { margin-top: 1.6rem; font-size: 1.85rem; font-weight: 800; letter-spacing: -0.3px; }
+.mv-exito-texto { margin-top: 0.7rem !important; color: #6A7794; font-size: 1.08rem; }
+.mv-exito .mv-acciones { justify-content: center; margin-top: 2rem; }
+.mv-exito .mv-boton { flex: 1; min-width: 0; height: 52px; }
+
+@media (max-width: 520px) {
+  .mv-modal { padding: 1.5rem 1.2rem 1.3rem; }
+  .mv-titulo { font-size: 1.7rem; }
+  .mv-candidato { flex-direction: column; text-align: center; }
+  .mv-acciones { flex-direction: column-reverse; }
+  .mv-boton { width: 100%; }
+  .mv-exito .mv-acciones { flex-direction: column; }
+}
