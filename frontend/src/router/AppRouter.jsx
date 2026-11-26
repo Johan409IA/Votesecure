@@ -3,12 +3,13 @@ import RutaProtegida from '../components/RutaProtegida';
 import RutaPublica from '../components/RutaPublica';
 import { useAuth } from '../hooks/useAuth';
 
+import CandidatosPage from '../pages/CandidatosPage';
 import CursoPage from '../pages/CursoPage';
 import LoginPage from '../pages/LoginPage';
 import MisCursosPage from '../pages/MisCursosPage';
 import NotFoundPage from '../pages/NotFoundPage';
-import ProximamentePage from '../pages/ProximamentePage';
 import RegistroPage from '../pages/RegistroPage';
+import ResultadosPage from '../pages/ResultadosPage';
 import VerificarCorreoPage from '../pages/VerificarCorreoPage';
 import AdminAuditoriaPage from '../pages/admin/AdminAuditoriaPage';
 import AdminCursoPage from '../pages/admin/AdminCursoPage';
@@ -35,9 +36,9 @@ export default function AppRouter() {
       <Route path="/cursos" element={<RutaProtegida><MisCursosPage /></RutaProtegida>} />
       <Route path="/cursos/:id" element={<RutaProtegida><CursoPage /></RutaProtegida>} />
 
-      {/* Pantallas por construir: candidatos/votar y resultados en vivo */}
-      <Route path="/cursos/:id/votar" element={<RutaProtegida><ProximamentePage /></RutaProtegida>} />
-      <Route path="/cursos/:id/resultados" element={<RutaProtegida><ProximamentePage /></RutaProtegida>} />
+      {/* /votar: candidatos y voto; /resultados: resultados en vivo y finales */}
+      <Route path="/cursos/:id/votar" element={<RutaProtegida><CandidatosPage /></RutaProtegida>} />
+      <Route path="/cursos/:id/resultados" element={<RutaProtegida><ResultadosPage /></RutaProtegida>} />
 
       {/* Panel de administrador */}
       <Route path="/admin/cursos" element={<RutaProtegida roles={SOLO_ADMIN}><AdminCursosPage /></RutaProtegida>} />
