@@ -4,8 +4,12 @@
 // con el valor de la cookie votecure_csrf (doble envío).
 // En desarrollo, Vite redirige /api al backend (puerto 3000), por eso la
 // base es relativa y el navegador trata todo como mismo origen.
+// En producción, VITE_API_URL es el host del backend (p. ej.
+// https://api.votesecureapp.com); /api se añade aquí para ambos casos.
 
-const BASE = '/api';
+export const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api`;
+
+const BASE = API_BASE;
 const COOKIE_CSRF = 'votecure_csrf';
 
 export const EVENTO_SESION_EXPIRADA = 'votesecure:sesion-expirada';

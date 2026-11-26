@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
+import { API_BASE } from '../services/api';
 
 // El correo trae: /verificar-correo?correo=...&token=...
 // Con esos datos se llama al backend (GET /api/auth/verificar), que confirma la
@@ -19,7 +20,7 @@ export default function VerificarCorreoPage() {
     if (!hayEnlace || iniciado.current) return;
     iniciado.current = true; // el token es de un solo uso: evita pedirlo dos veces
     const consulta = new URLSearchParams({ correo, token });
-    window.location.replace(`/api/auth/verificar?${consulta.toString()}`);
+    window.location.replace(`${API_BASE}/auth/verificar?${consulta.toString()}`);
   }, [hayEnlace, correo, token]);
 
   let contenido;
