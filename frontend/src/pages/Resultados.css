@@ -1,0 +1,138 @@
+/* Pantalla de resultados (en vivo y final). Los estilos generales (.boton,
+   .aviso, .pildora, .estado-vacio, .cu-*) viven en Cursos.css. */
+
+/* Avisos propios de esta pantalla */
+.rs-banner { margin-bottom: 1.1rem; }
+.aviso-exito-voto { background: #E4F5EC; color: #16603F; border-color: #BFEBD4; }
+
+/* Conexión y última actualización */
+.rs-cabecera-vivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+.rs-conexion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--gris-suave, #EEF1F7);
+  color: #4A5670;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.rs-conexion.activa { background: var(--verde-suave, #E4F5EC); color: var(--verde, #1C7A4E); }
+.rs-conexion svg { animation: rs-late 2s ease-in-out infinite; }
+@keyframes rs-late { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.rs-actualizacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--gris-texto, #5B6578);
+  font-size: 0.85rem;
+}
+
+/* Tarjetas */
+.rs-tarjeta {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.3rem 1.5rem;
+  background: #fff;
+  border: 1px solid var(--borde, #E3E6EF);
+  border-radius: 16px;
+}
+.rs-tarjeta-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+.rs-tarjeta-icono.tono-amarillo { background: #FDF4DE; color: #946B00; }
+.rs-tarjeta-icono.tono-gris { background: var(--gris-suave, #EEF1F7); color: #4A5670; }
+.rs-tarjeta h2 { font-size: 1.15rem; font-weight: 800; }
+.rs-tarjeta p { margin-top: 0.35rem; color: var(--gris-texto, #5B6578); line-height: 1.45; }
+
+/* Gráfico y ranking */
+.rs-grafico { display: block; margin-bottom: 1.1rem; }
+.rs-grafico-lienzo { width: 100%; }
+.rs-estado-cero {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 2.2rem 1rem;
+  text-align: center;
+  color: var(--gris-texto, #5B6578);
+}
+.rs-estado-cero h2 { font-size: 1.2rem; color: var(--tinta, #0B1B3B); }
+.rs-ranking { list-style: none; margin: 0.4rem 0 0; padding: 0; border-top: 1px solid var(--borde, #E3E6EF); }
+.rs-ranking-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.2rem;
+  border-bottom: 1px solid var(--borde, #E3E6EF);
+}
+.rs-ranking-fila:last-child { border-bottom: none; }
+.rs-puesto { flex: none; width: 2.4rem; font-weight: 800; color: var(--rojo, #C8102E); }
+.rs-ranking-nombre { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.rs-ranking-votos { flex: none; color: var(--gris-texto, #5B6578); font-size: 0.9rem; }
+
+/* Totales */
+.rs-totales {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.9rem;
+  margin-top: 1.1rem;
+}
+.rs-total {
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--borde, #E3E6EF);
+  border-radius: 14px;
+}
+.rs-total strong { display: block; font-size: 1.6rem; line-height: 1; font-weight: 800; }
+.rs-total span { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--gris-texto, #5B6578); }
+
+/* Delegado electo */
+.rs-ganador {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.6rem 1.6rem;
+  background: linear-gradient(145deg, #E4F5EC, #D3EEDF);
+  border: 1px solid #BFEBD4;
+  border-radius: 16px;
+  margin-bottom: 1.1rem;
+}
+.rs-ganador-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  color: #12A06B;
+  box-shadow: 0 6px 16px rgba(18, 160, 107, 0.25);
+}
+.rs-ganador-etiqueta { margin: 0; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #16603F; }
+.rs-ganador-nombre { margin: 0.25rem 0 0 !important; font-size: 1.7rem; font-weight: 800; color: var(--tinta, #0B1B3B); overflow-wrap: anywhere; }
+.rs-ganador-dato { margin: 0.4rem 0 0 !important; color: #16603F !important; font-size: 0.92rem; }
+
+/* Acciones del docente bajo el resultado */
+.cursos-pagina > .boton-ancho { margin-top: 1.1rem; }
+
+@media (max-width: 720px) {
+  .rs-totales { grid-template-columns: repeat(2, 1fr); }
+  .rs-ganador { flex-direction: column; text-align: center; }
+  .cursos-pagina > .boton-ancho { display: flex; justify-content: center; }
+}

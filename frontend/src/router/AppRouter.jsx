@@ -6,8 +6,8 @@ import CursoPage from '../pages/CursoPage';
 import LoginPage from '../pages/LoginPage';
 import MisCursosPage from '../pages/MisCursosPage';
 import NotFoundPage from '../pages/NotFoundPage';
-import ProximamentePage from '../pages/ProximamentePage';
 import RegistroPage from '../pages/RegistroPage';
+import ResultadosPage from '../pages/ResultadosPage';
 import VerificarCorreoPage from '../pages/VerificarCorreoPage';
 import CandidatosPage from '../pages/CandidatosPage';
 
@@ -24,8 +24,9 @@ export default function AppRouter() {
       <Route path="/cursos" element={<RutaProtegida><MisCursosPage /></RutaProtegida>} />
       <Route path="/cursos/:id" element={<RutaProtegida><CursoPage /></RutaProtegida>} />
 
+      {/* /votar: candidatos y voto; /resultados: resultados en vivo y finales */}
       <Route path="/cursos/:id/votar" element={<RutaProtegida><CandidatosPage /></RutaProtegida>} />
-      <Route path="/cursos/:id/resultados" element={<RutaProtegida><ProximamentePage /></RutaProtegida>} />
+      <Route path="/cursos/:id/resultados" element={<RutaProtegida><ResultadosPage /></RutaProtegida>} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

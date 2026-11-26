@@ -152,6 +152,39 @@
 .mv-exito .mv-acciones { justify-content: center; margin-top: 2rem; }
 .mv-exito .mv-boton { flex: 1; min-width: 0; height: 52px; }
 
+/* ── Campos de gestión (proclamar / desempate) ─────────────── */
+.mp-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1.4rem; }
+.mp-campo {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  background: #F5F7FC;
+  border: 1px solid var(--mv-borde);
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+.mp-campo > span { display: flex; align-items: center; gap: 0.4rem; color: var(--mv-gris); font-weight: 700; }
+.mp-campo svg { color: var(--mv-gris); }
+.mp-campo input,
+.mp-campo select {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #D9DEEA;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--mv-tinta);
+}
+.mp-campo input:disabled,
+.mp-campo select:disabled { opacity: 0.6; }
+.mp-duracion { margin-top: 1.4rem; }
+.mp-duracion select { max-width: 200px; }
+
+@media (max-width: 520px) {
+  .mp-campos { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 520px) {
   .mv-modal { padding: 1.5rem 1.2rem 1.3rem; }
   .mv-titulo { font-size: 1.7rem; }
