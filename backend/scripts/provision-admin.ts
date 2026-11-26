@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Pool } from 'pg';
 import { hash } from '@node-rs/argon2';
 import { loadServerEnv } from '../src/config/env';
+import { createMailAdapter } from '../src/application/services/mail';
 import { logger } from '../src/config/logger';
 
 const argsSchema = z
@@ -63,6 +64,28 @@ async function main(): Promise<void> {
       const link = `${env.FRONTEND_URL}/verificar-correo?correo=${encodeURIComponent(args.correo)}&token=${encodeURIComponent(token)}`;
       logger.info({ link }, 'Administrador provisionado. Verifica el correo con este enlace');
       console.log('Administrador provisionado.');
+      // El correo del admin no esta limitado a UTP, asi que no puede usar
+      // POST /auth/reenviar-verificacion (solo acepta @utp.edu.pe); si el
+      // enlace de 24 h vence y no llego el correo, la cuenta quedaria sin
+      // salida. El envio usa el mismo adaptador que la API (Resend en
+      // production, consola en development salvo CORREO_REAL_EN_LOCAL=true);
+      // si falla, el enlace queda impreso y la cuenta ya esta creada.
+      const mail = createMailAdapter(
+        env.RESEND_API_KEY,
+        env.REMITENTE_CORREO,
+        env.NODE_ENV,
+        env.CORREO_REAL_EN_LOCAL
+      );
+      try {
+        await mail.sendVerification(args.correo, link);
+        console.log(`Enlace de verificacion enviado a ${args.correo}`);
+      } catch (error) {
+        logger.error(
+          { error: error instanceof Error ? error.message : String(error) },
+          'No se pudo enviar el correo de verificacion del admin'
+        );
+        console.warn('No se pudo enviar el correo de verificacion (detalles en el log). Usa el enlace de abajo.');
+      }
       console.log(`Enlace de verificacion: ${link}`);
     } catch (error) {
       await client.query('ROLLBACK');
