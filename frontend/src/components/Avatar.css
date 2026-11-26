@@ -1,0 +1,9 @@
+.avatar { flex: none; border-radius: 50%; object-fit: cover; }
+.avatar-iniciales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #FBE3E7, #F4B9C2);
+  color: #C8102E;
+  font-weight: 800;
+}
