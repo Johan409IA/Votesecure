@@ -1,0 +1,142 @@
+/* Panel de administrador. Reutiliza las clases de Cursos.css (botones, píldoras,
+   avatares, tarjetas y ventanas); aquí solo va lo propio del admin. */
+
+.cursos-pagina .boton.boton-chico { height: 34px; padding: 0 0.85rem; font-size: 0.85rem; border-radius: 9px; }
+.boton-peligro { background: #fff; color: #8A0F22; border-color: #F6C3CB !important; }
+.boton-peligro:hover { background: #FDECEE; }
+
+/* ── Barra de búsqueda y filtros ──────────────────────────── */
+.ad-barra { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.ad-busqueda { position: relative; flex: 1; min-width: 240px; max-width: 420px; }
+.ad-busqueda svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: #8A94A8; pointer-events: none; }
+.ad-busqueda input,
+.ad-campo,
+.ad-select {
+  width: 100%;
+  height: 44px;
+  padding: 0 1rem;
+  border: 1.5px solid var(--borde, #E3E6EF);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--tinta, #0B1B3B);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+.ad-busqueda input { padding-left: 2.6rem; }
+.ad-busqueda input:focus,
+.ad-campo:focus,
+.ad-select:focus { outline: none; border-color: #C8102E; box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.1); }
+.ad-select { appearance: auto; cursor: pointer; }
+.ad-select:disabled { background: #F4F6FB; cursor: not-allowed; color: #8A94A8; }
+
+/* ── Tabla de cursos ──────────────────────────────────────── */
+.ad-tabla-caja {
+  background: #fff;
+  border: 1px solid var(--borde, #E3E6EF);
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(11, 27, 59, 0.04);
+  overflow-x: auto;
+}
+.ad-tabla { width: 100%; border-collapse: collapse; min-width: 760px; }
+.ad-tabla th {
+  padding: 0.9rem 1.2rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--gris-texto, #5B6578);
+  border-bottom: 1px solid var(--borde, #E3E6EF);
+  white-space: nowrap;
+}
+.ad-tabla td { padding: 0.95rem 1.2rem; border-bottom: 1px solid #EEF1F7; font-size: 0.93rem; vertical-align: middle; }
+.ad-tabla tbody tr:last-child td { border-bottom: none; }
+.ad-tabla tbody tr:hover { background: #FAFBFE; }
+.ad-curso-celda { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
+.ad-curso-celda .curso-avatar { width: 44px; height: 44px; font-size: 1rem; border-radius: 12px; }
+.ad-curso-celda strong { display: block; font-size: 0.98rem; }
+.ad-curso-celda span { display: block; margin-top: 2px; font-size: 0.82rem; color: var(--gris-texto, #5B6578); }
+.ad-codigo { font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; letter-spacing: 0.5px; }
+.ad-derecha { text-align: right; white-space: nowrap; }
+
+/* ── Listas de personas (docentes, estudiantes) ───────────── */
+.ad-lista { list-style: none; margin: 0; padding: 0; }
+.ad-lista.con-scroll { max-height: 340px; overflow-y: auto; }
+.ad-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #EEF1F7;
+}
+.ad-fila:last-child { border-bottom: none; }
+.ad-persona-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--rojo-suave, #FDECEE);
+  color: #C8102E;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.ad-persona { flex: 1; min-width: 0; }
+.ad-persona strong { display: block; font-size: 0.93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-persona span { display: block; font-size: 0.8rem; color: var(--gris-texto, #5B6578); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-fila.inactiva .ad-persona strong { color: #8A94A8; text-decoration: line-through; }
+.ad-vacio { padding: 1rem 0; color: var(--gris-texto, #5B6578); font-size: 0.92rem; }
+
+.ad-agregar { display: flex; gap: 0.6rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--borde, #E3E6EF); }
+.ad-agregar .ad-select, .ad-agregar .ad-campo { flex: 1; min-width: 0; }
+.ad-resultados { list-style: none; margin: 0.6rem 0 0; padding: 0; border: 1px solid var(--borde, #E3E6EF); border-radius: 10px; overflow: hidden; }
+.ad-resultados li { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0.9rem; border-bottom: 1px solid #EEF1F7; }
+.ad-resultados li:last-child { border-bottom: none; }
+.ad-nota { margin: 0.6rem 0 0; font-size: 0.82rem; color: var(--gris-texto, #5B6578); }
+.ad-contador { font-size: 0.85rem; font-weight: 600; color: var(--gris-texto, #5B6578); margin-left: auto; }
+
+/* ── Detalle de curso: acciones y elecciones ──────────────── */
+.ad-cabecera-acciones { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.ad-ancho-total { grid-column: 1 / -1; }
+.ad-eleccion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #EEF1F7;
+  flex-wrap: wrap;
+}
+.ad-eleccion:last-child { border-bottom: none; }
+.ad-eleccion-info { flex: 1; min-width: 200px; }
+.ad-eleccion-info strong { display: block; font-size: 0.97rem; }
+.ad-eleccion-info span { display: block; margin-top: 2px; font-size: 0.83rem; color: var(--gris-texto, #5B6578); }
+.ad-aviso-accion { margin-bottom: 1.1rem; }
+
+/* ── Auditoría ────────────────────────────────────────────── */
+.ad-filtros { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; padding: 1.2rem 1.4rem; background: #fff; border: 1px solid var(--borde, #E3E6EF); border-radius: 16px; }
+.ad-filtros label { display: block; margin-bottom: 0.4rem; font-weight: 700; font-size: 0.85rem; }
+.ad-evento-detalle { margin: 0; padding: 0; list-style: none; font-size: 0.82rem; color: #3D4863; }
+.ad-evento-detalle li + li { margin-top: 2px; }
+.ad-evento-detalle b { font-weight: 700; }
+.ad-sin-datos { color: #9AA3B5; }
+.ad-resumen-eleccion { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1rem 1.4rem; margin-bottom: 1rem; background: #fff; border: 1px solid var(--borde, #E3E6EF); border-radius: 16px; }
+.ad-resumen-eleccion h2 { font-size: 1.15rem; font-weight: 800; }
+.ad-resumen-eleccion span { color: var(--gris-texto, #5B6578); font-size: 0.9rem; }
+.ad-pie-info { display: flex; align-items: center; gap: 0.6rem; margin-top: 1rem; padding: 0.9rem 1.1rem; background: var(--azul-suave, #EEF3FB); border: 1px solid #CFDCF2; border-radius: 12px; color: #1B3A6B; font-size: 0.88rem; }
+
+/* ── Ventana de crear sección ─────────────────────────────── */
+.modal-grupo { margin-bottom: 1rem; }
+.modal .modal-input.normal { height: 46px; font-size: 1rem; letter-spacing: 0; }
+.modal .modal-ayuda { margin: 0.35rem 0 0; font-size: 0.8rem; color: #5B6578; }
+
+@media (max-width: 760px) {
+  .ad-filtros { grid-template-columns: 1fr; }
+  .ad-agregar { flex-direction: column; }
+}
+
+/* ── Complementos ─────────────────────────────────────────── */
+.aviso-ok { background: #E9F6EF; color: #14532D; border-color: #BFE3CE; }
+.cu-rejilla.dos-columnas { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1000px) { .cu-rejilla.dos-columnas { grid-template-columns: 1fr; } }
