@@ -125,10 +125,14 @@ export async function verifyEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const confirmed = await usersRepo.confirmEmail(
-    normalizeEmail(email),
-    hashToken(token)
-  );
+  const normalizedEmail = normalizeEmail(email);
+  // Idempotencia: los clientes de correo (p. ej. Outlook) precargan el enlace
+  // para escanearlo y consumen el token de un solo uso antes del clic real,
+  // mostrando un falso «Enlace no valido» al usuario. Si la cuenta ya esta
+  // verificada, se responde exito sin volver a validar el token.
+  const existing = await usersRepo.getByEmail(normalizedEmail);
+  if (existing?.emailVerifiedAt) return;
+  const confirmed = await usersRepo.confirmEmail(normalizedEmail, hashToken(token));
   if (!confirmed) {
     throw new BusinessError('El enlace de verificacion es invalido o expiro');
   }
