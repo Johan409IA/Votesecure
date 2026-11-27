@@ -1,0 +1,94 @@
+/* Mi perfil. Autocontenido: todo cuelga de .pf-pagina. */
+.pf-pagina {
+  --pf-rojo: #C8102E;
+  --pf-rojo-osc: #A50D26;
+  --pf-rojo-suave: #FDECEE;
+  --pf-tinta: #0B1B3B;
+  --pf-gris: #5B6578;
+  --pf-borde: #E3E6EF;
+  --pf-verde: #1C7A4E;
+  --pf-verde-suave: #E9F6EF;
+  --pf-azul: #1B3A6B;
+  --pf-azul-suave: #EEF3FB;
+  --pf-suave: #EEF1F7;
+  color: var(--pf-tinta);
+}
+.pf-pagina h1, .pf-pagina h2, .pf-pagina h3, .pf-pagina p, .pf-pagina dl, .pf-pagina dd, .pf-pagina ul { margin: 0; padding: 0; }
+.pf-pagina h1, .pf-pagina h2, .pf-pagina h3 { font-family: inherit; color: var(--pf-tinta); }
+.pf-titulo h1 { font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; }
+.pf-titulo p { margin-top: 0.5rem; color: var(--pf-gris); font-size: 1.05rem; }
+
+.pf-rejilla { display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; margin-top: 1.6rem; align-items: start; }
+.pf-columna { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.pf-tarjeta {
+  padding: 1.6rem;
+  background: #fff;
+  border: 1px solid var(--pf-borde);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(11, 27, 59, 0.05);
+}
+.pf-tarjeta h3 { display: flex; align-items: center; gap: 0.55rem; font-size: 1.15rem; font-weight: 800; margin-bottom: 1.1rem; }
+.pf-tarjeta h3 svg { color: var(--pf-rojo); }
+
+/* Foto */
+.pf-foto { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.9rem; }
+.pf-foto .avatar { border: 4px solid #fff; box-shadow: 0 8px 22px rgba(200, 16, 46, 0.2); }
+.pf-foto h2 { font-size: 1.3rem; font-weight: 800; overflow-wrap: anywhere; }
+.pf-pildoras { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.pf-pildora { padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.pf-pildora.tono-azul { background: var(--pf-azul-suave); color: var(--pf-azul); }
+.pf-pildora.tono-verde { background: var(--pf-verde-suave); color: var(--pf-verde); }
+.pf-pildora.tono-rojo { background: var(--pf-rojo-suave); color: var(--pf-rojo); }
+.pf-foto-acciones { display: flex; flex-direction: column; align-items: stretch; gap: 0.4rem; width: 100%; margin-top: 0.4rem; }
+.pf-ayuda { color: var(--pf-gris); font-size: 0.8rem; line-height: 1.4; }
+
+/* Datos */
+.pf-datos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem 1.5rem; }
+.pf-datos div { min-width: 0; padding: 0.85rem 1rem; background: #F7F8FC; border: 1px solid var(--pf-borde); border-radius: 12px; }
+.pf-datos dt { display: flex; align-items: center; gap: 0.4rem; color: var(--pf-gris); font-size: 0.8rem; font-weight: 600; }
+.pf-datos dd { margin-top: 0.3rem; font-weight: 700; overflow-wrap: anywhere; }
+.pf-nota { margin-top: 1rem; color: var(--pf-gris); font-size: 0.85rem; }
+
+/* Cursos */
+.pf-vacio { color: var(--pf-gris); }
+.pf-cursos { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+.pf-cursos a {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem;
+  border: 1px solid var(--pf-borde); border-radius: 12px; text-decoration: none; color: inherit;
+}
+.pf-cursos a:hover { border-color: #C5CCDD; background: #FAFBFE; }
+.pf-cursos b { display: block; }
+.pf-cursos small { display: block; margin-top: 2px; color: var(--pf-gris); }
+.pf-codigo { flex: none; padding: 3px 10px; border-radius: 8px; background: var(--pf-suave); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px; }
+
+/* Contraseña */
+.pf-form { display: flex; flex-direction: column; gap: 0.9rem; max-width: 460px; }
+.pf-form label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.88rem; font-weight: 700; }
+.pf-form input {
+  height: 48px; padding: 0 0.9rem; border: 1.5px solid #D9DEEA; border-radius: 12px;
+  font-family: inherit; font-size: 1rem; color: var(--pf-tinta);
+}
+.pf-form input:focus { outline: none; border-color: var(--pf-rojo); box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.1); }
+.pf-form small { color: var(--pf-gris); font-weight: 400; }
+.pf-form-acciones { display: flex; }
+
+/* Botones y mensajes */
+.pf-boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 44px; padding: 0 1.25rem;
+  border: 1.5px solid transparent; border-radius: 10px; font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pf-boton:disabled { opacity: 0.55; cursor: not-allowed; }
+.pf-boton-rojo { background: var(--pf-rojo); color: #fff; }
+.pf-boton-rojo:hover:not(:disabled) { background: var(--pf-rojo-osc); }
+.pf-boton-claro { background: #fff; color: var(--pf-tinta); border-color: #D9DEEA; }
+.pf-boton-claro:hover:not(:disabled) { border-color: #B9C1D4; }
+.pf-boton-texto { height: 36px; background: transparent; color: var(--pf-gris); align-self: flex-start; padding: 0 0.4rem; }
+.pf-foto-acciones .pf-boton-texto { align-self: center; }
+.pf-boton-texto:hover:not(:disabled) { color: var(--pf-rojo); }
+.pf-mensaje { padding: 0.7rem 0.9rem; border-radius: 10px; font-size: 0.9rem; text-align: left; }
+.pf-mensaje-error { background: var(--pf-rojo-suave); color: #8A0F22; border: 1px solid #F6C3CB; }
+.pf-mensaje-ok { background: var(--pf-verde-suave); color: var(--pf-verde); border: 1px solid #BFE3CF; }
+
+@media (max-width: 900px) { .pf-rejilla { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .pf-datos { grid-template-columns: 1fr; } .pf-titulo h1 { font-size: 2rem; } }

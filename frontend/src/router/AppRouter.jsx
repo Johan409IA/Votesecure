@@ -10,6 +10,8 @@ import RegistroPage from '../pages/RegistroPage';
 import ResultadosPage from '../pages/ResultadosPage';
 import VerificarCorreoPage from '../pages/VerificarCorreoPage';
 import CandidatosPage from '../pages/CandidatosPage';
+import EvaluarDelegadoPage from '../pages/EvaluarDelegadoPage';
+import PerfilPage from '../pages/PerfilPage';
 
 export default function AppRouter() {
   return (
@@ -27,6 +29,9 @@ export default function AppRouter() {
       {/* /votar: candidatos y voto; /resultados: resultados en vivo y finales */}
       <Route path="/cursos/:id/votar" element={<RutaProtegida><CandidatosPage /></RutaProtegida>} />
       <Route path="/cursos/:id/resultados" element={<RutaProtegida><ResultadosPage /></RutaProtegida>} />
+
+      <Route path="/cursos/:id/evaluar" element={<RutaProtegida><EvaluarDelegadoPage /></RutaProtegida>} />
+      <Route path="/perfil" element={<RutaProtegida><PerfilPage /></RutaProtegida>} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

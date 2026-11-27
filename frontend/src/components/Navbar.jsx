@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { inicialesDeUsuario } from '../utils/cursos';
+import Avatar from './Avatar';
 import './Navbar.css';
 
 // Enlaces de la barra. Se irán agregando aquí al construir cada pantalla.
@@ -45,11 +45,13 @@ export default function Navbar() {
       </nav>
 
       <div className="topbar-usuario">
-        <span className="topbar-avatar" aria-hidden="true">{inicialesDeUsuario(auth.usuario.nombre)}</span>
-        <div className="topbar-datos">
-          <span className="topbar-nombre">{auth.usuario.nombre}</span>
-          <span className="topbar-rol">{ETIQUETA_ROL[auth.usuario.tipo] ?? auth.usuario.tipo}</span>
-        </div>
+        <NavLink to="/perfil" className="topbar-perfil" aria-label="Mi perfil">
+          <Avatar nombre={auth.usuario.nombre} fotoUrl={auth.usuario.fotoUrl} tamano={42} />
+          <div className="topbar-datos">
+            <span className="topbar-nombre">{auth.usuario.nombre}</span>
+            <span className="topbar-rol">{ETIQUETA_ROL[auth.usuario.tipo] ?? auth.usuario.tipo}</span>
+          </div>
+        </NavLink>
         <span className="topbar-separador" aria-hidden="true"></span>
         <button type="button" className="topbar-salir" onClick={cerrarSesion}>
           <LogOut size={18} /> <span>Cerrar sesión</span>
