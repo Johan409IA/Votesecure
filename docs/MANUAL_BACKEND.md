@@ -104,6 +104,25 @@ Todo en **sus secciones** (aquellas donde tiene asignación activa en `asignacio
 
 - **No puede** (por regla de negocio, no por rol): evaluar delegados (403 «El administrador no evalua delegados»), votar, auto-matricularse ni registrarse por la API pública.
 
+#### 3.3.1 Panel del administrador (frontend)
+
+El backend expone todo lo anterior, pero **no existe pantalla de admin en `main`**: el panel vive en la rama `feature/panel-admin` (Navbar con enlaces por rol, `/admin/cursos`, `/admin/auditoria`). Al loguearse, el admin cae en la vista general (`/cursos`); `MisCursosPage` le muestra el estado vacío por no tener matrículas ni secciones asignadas. Lo que el panel debe cubrir cuando se complete y fusione:
+
+| Sección del panel | Qué incluye | Endpoints que consume |
+|---|---|---|
+| Navbar por rol | Enlaces según `usuario.tipo`: admin ve «Cursos» y «Auditoría»; estudiante/docente ven «Mis cursos». Etiqueta de rol bajo el nombre. | — |
+| Gestión de cuentas | Listado con búsqueda (sin hashes ni fotos), activar/desactivar cuentas (la desactivación revoca la sesión al instante). | `GET /api/usuarios`, `PATCH /api/usuarios/:id` |
+| Gestión de secciones | Crear secciones (código `SEC-XXXX`), asignar/quitar docentes, altas y bajas de matrículas sin código, activar/desactivar asignaciones. | `POST /api/secciones`, `POST /api/secciones/:id/asignaciones`, `POST /api/secciones/:id/matriculas`, `PATCH` correspondientes |
+| Gestión electoral | Todos los poderes del docente sobre **cualquier** sección: elecciones, candidaturas, habilitaciones, ciclo de vida, proclamación, desempates y periodos de evaluación. | Rutas de §5.3–§5.5 |
+| Auditoría | Historial inmutable de los 4 eventos electorales (creación, activación, cancelación, cierre/publicación) de cualquier elección. | `GET /api/auditoria/elecciones/:id` |
+| Perfil propio | Datos de la cuenta (nombre, correo, tipo), foto de perfil (subir JPEG ≤ 90 000 caracteres en data URL, o eliminarla) y cambio de contraseña (exige la actual y **invalida la sesión vigente**: re-login inmediato). | `GET /api/auth/yo` (`fotoUrl`), `POST\|DELETE /api/usuarios/yo/foto`, `POST /api/auth/cambiar-contrasena` |
+
+Notas de diseño para el panel:
+
+- El **login no bloquea** cuentas sin verificar (acepta cualquier correo, Gmail incluido); es la pantalla principal la que limita el contenido hasta verificar. El panel de admin debe aplicar el mismo criterio.
+- El **provisionamiento de admins sigue siendo por CLI** (`admin:provisionar`), nunca desde el panel ni por registro público.
+- El botón de **reenvío de verificación** ya existe en el registro y en el estado sin verificar de Mis Cursos (cooldown de 60 s alineado con la BD); no es parte del panel.
+
 ---
 
 ## 4. Arquitectura por capas
