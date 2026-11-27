@@ -4,6 +4,9 @@ export interface MailAdapter {
   sendVerification(recipient: string, link: string): Promise<void>;
 }
 
+const NOMBRE_REMITENTE = 'VoteSecure';
+const ASUNTO_VERIFICACION = 'Confirma tu correo para activar tu cuenta en VoteSecure';
+
 class ConsoleMailAdapter implements MailAdapter {
   async sendVerification(recipient: string, link: string): Promise<void> {
     logger.info(
@@ -19,6 +22,44 @@ class ResendMailAdapter implements MailAdapter {
     private readonly sender: string
   ) {}
 
+  // Nombre visible + direccion: REMITENTE_CORREO llega validado como correo
+  // plano (env.ts usa z.email()), el nombre se compone aqui.
+  private remitente(): string {
+    return `${NOMBRE_REMITENTE} <${this.sender}>`;
+  }
+
+  private html(link: string): string {
+    return `<!doctype html>
+<html lang="es">
+  <body style="margin:0; padding:24px; background:#f5f6f8; font-family:Arial,Helvetica,sans-serif; font-size:16px; color:#222222; line-height:1.5;">
+    <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:8px; padding:32px;">
+      <p style="margin:0 0 16px;">Hola,</p>
+      <p style="margin:0 0 16px;">Recibimos una solicitud para crear una cuenta en <strong>VoteSecure</strong> con este correo. Confírmalo para poder iniciar sesión:</p>
+      <p style="margin:24px 0; text-align:center;">
+        <a href="${link}" style="display:inline-block; background:#c8102e; color:#ffffff; text-decoration:none; font-weight:bold; padding:12px 28px; border-radius:6px;">Confirmar mi correo</a>
+      </p>
+      <p style="margin:0 0 16px;">El enlace vence en 24 horas y solo se puede usar una vez.</p>
+      <p style="margin:0 0 16px;">Si no creaste una cuenta, ignora este mensaje: nadie podrá usarla sin confirmar el correo.</p>
+      <p style="margin:24px 0 0; color:#767676; font-size:14px;">El equipo de VoteSecure<br>votesecureapp.com</p>
+    </div>
+  </body>
+</html>`;
+  }
+
+  private texto(link: string): string {
+    return `Hola,
+
+Recibimos una solicitud para crear una cuenta en VoteSecure con este correo. Confírmalo para poder iniciar sesión:
+
+${link}
+
+El enlace vence en 24 horas y solo se puede usar una vez.
+Si no creaste una cuenta, ignora este mensaje: nadie podrá usarla sin confirmar el correo.
+
+El equipo de VoteSecure
+votesecureapp.com`;
+  }
+
   async sendVerification(recipient: string, link: string): Promise<void> {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -27,11 +68,11 @@ class ResendMailAdapter implements MailAdapter {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: this.sender,
+        from: this.remitente(),
         to: recipient,
-        subject: 'Verifica tu cuenta VoteSecure',
-        text: `Abre este enlace para verificar tu cuenta: ${link}`,
-        html: `<p>Abre este enlace para verificar tu cuenta:</p><p><a href="${link}">${link}</a></p>`
+        subject: ASUNTO_VERIFICACION,
+        text: this.texto(link),
+        html: this.html(link)
       })
     });
 
