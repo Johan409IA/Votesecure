@@ -121,7 +121,7 @@ export default function CandidatosPage() {
       <section className="ca-barra" aria-live="polite">
         {seleccion ? (
           <>
-            <Avatar nombre={seleccion.studentName} fotoUrl={seleccion.studentPhotoUrl} tamano={52} />
+            <Avatar nombre={seleccion.studentName} fotoUrl={seleccion.photoUrl} tamano={52} />
             <div className="ca-barra-sel">
               <small>Tu selección</small>
               <strong>{seleccion.studentName}</strong>

@@ -38,8 +38,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (correo, contrasena) => {
     const datos = await authService.login(correo, contrasena);
-    setUsuario(datos.usuario);
-    return datos.usuario;
+    // /auth/login no devuelve la foto de perfil; /auth/yo sí. Si falla, se usa lo del login.
+    const completo = await authService.obtenerSesion().then((d) => d.usuario).catch(() => datos.usuario);
+    setUsuario(completo);
+    return completo;
   }, []);
 
   const registro = useCallback((datos) => authService.registro(datos), []);

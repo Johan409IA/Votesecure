@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, ChevronRight, ClipboardList, Clock, Info, Lock, User, Vote,
+  ArrowLeft, ArrowRight, ChevronRight, Clock, Info, User, Vote,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import TarjetaEvaluacion from '../components/TarjetaEvaluacion';
 import { cargarCurso } from '../services/curso.service';
 import { ESTADOS, fechaLegible, iniciales } from '../utils/cursos';
 import './Cursos.css';
@@ -197,17 +198,7 @@ export default function CursoPage() {
           )}
         </section>
 
-        <aside className="cu-tarjeta">
-          <div className="cu-tarjeta-titulo">
-            <span className="cu-icono gris"><ClipboardList size={22} /></span>
-            <h2>Evaluación del delegado</h2>
-          </div>
-          <span className="cu-candado"><Lock size={16} /> Disponible después de la elección</span>
-          <p className="cu-texto-lateral">
-            Podrás evaluar al delegado elegido para la sección cuando el proceso haya finalizado.
-          </p>
-          <div className="cu-pie-lateral"><Info size={16} /> Habilitación posterior al proceso</div>
-        </aside>
+        <TarjetaEvaluacion seccionId={seccion.id} estado={estado} />
       </div>
     </div>
   );

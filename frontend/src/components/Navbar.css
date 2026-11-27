@@ -40,6 +40,7 @@
 }
 
 .topbar-usuario { display: flex; align-items: center; gap: 0.8rem; }
+.topbar-perfil { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; }
 .topbar-avatar {
   display: flex;
   align-items: center;

@@ -1,0 +1,86 @@
+/* Evaluación del delegado. Autocontenido: todo cuelga de .ev-pagina o usa prefijo ev-. */
+.ev-pagina {
+  --ev-rojo: #C8102E;
+  --ev-rojo-osc: #A50D26;
+  --ev-rojo-suave: #FDECEE;
+  --ev-tinta: #0B1B3B;
+  --ev-gris: #5B6578;
+  --ev-borde: #E3E6EF;
+  --ev-verde: #1C7A4E;
+  --ev-verde-suave: #E9F6EF;
+  max-width: 760px;
+  color: var(--ev-tinta);
+}
+.ev-pagina h1, .ev-pagina h2, .ev-pagina h3, .ev-pagina p { margin: 0; font-family: inherit; }
+.ev-pagina h1 { margin-top: 1rem; font-size: 2.3rem; font-weight: 800; letter-spacing: -0.8px; }
+.ev-sub { margin-top: 0.4rem !important; color: var(--ev-gris); }
+.ev-nota { color: var(--ev-gris); font-size: 0.9rem; }
+.ev-volver { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ev-gris); text-decoration: none; font-size: 0.95rem; }
+.ev-volver:hover { color: var(--ev-rojo); }
+
+.ev-tarjeta { margin-top: 1.2rem; padding: 1.5rem; background: #fff; border: 1px solid var(--ev-borde); border-radius: 18px; box-shadow: 0 8px 24px rgba(11, 27, 59, 0.05); }
+.ev-tarjeta h3 { margin-bottom: 1rem !important; font-size: 1.15rem; font-weight: 800; }
+.ev-delegado-grande { display: flex; align-items: center; gap: 1.1rem; }
+.ev-delegado-grande small { color: var(--ev-gris); }
+.ev-delegado-grande h2 { margin-top: 2px !important; font-size: 1.5rem; font-weight: 800; }
+
+.ev-aviso { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.2rem; padding: 0.9rem 1.1rem; background: #F4F6FB; border: 1px solid var(--ev-borde); border-radius: 12px; color: var(--ev-gris); font-size: 0.95rem; }
+.ev-aviso-error { background: var(--ev-rojo-suave); border-color: #F6C3CB; color: #8A0F22; font-weight: 600; }
+
+/* Formulario */
+.ev-instrucciones { margin-bottom: 1.4rem; padding: 0.9rem 1.1rem; background: #F4F6FB; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; }
+.ev-instrucciones b { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; }
+.ev-campo { display: block; margin: 0 0 1.3rem; padding: 0; border: none; }
+.ev-campo legend, .ev-etiqueta { display: block; margin-bottom: 0.6rem; padding: 0; font-size: 0.92rem; font-weight: 700; }
+.ev-notas { display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.4rem; }
+.ev-nota-btn {
+  height: 48px; border: 1.5px solid #D9DEEA; border-radius: 10px; background: #fff; color: var(--ev-tinta);
+  font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.ev-nota-btn:hover { border-color: #B9C1D4; }
+.ev-nota-btn.activa { background: var(--ev-rojo); border-color: var(--ev-rojo); color: #fff; }
+.ev-nota-btn:focus-visible { outline: 3px solid #F4A6AD; outline-offset: 2px; }
+.ev-escala { display: flex; justify-content: space-between; margin-top: 0.4rem; color: var(--ev-gris); font-size: 0.82rem; }
+.ev-campo textarea { width: 100%; box-sizing: border-box; padding: 0.8rem 0.9rem; border: 1.5px solid #D9DEEA; border-radius: 12px; font-family: inherit; font-size: 1rem; color: var(--ev-tinta); resize: vertical; }
+.ev-campo textarea:focus { outline: none; border-color: var(--ev-rojo); box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.1); }
+.ev-contador { display: block; margin-top: 0.3rem; text-align: right; color: var(--ev-gris); font-size: 0.8rem; }
+.ev-acciones { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.3rem; }
+.ev-boton { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 1.6rem; border: 1.5px solid transparent; border-radius: 10px; font-family: inherit; font-size: 1rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+.ev-boton:disabled { opacity: 0.5; cursor: not-allowed; }
+.ev-boton-rojo { background: var(--ev-rojo); color: #fff; box-shadow: 0 8px 18px rgba(200, 16, 46, 0.22); }
+.ev-boton-rojo:hover:not(:disabled) { background: var(--ev-rojo-osc); }
+.ev-boton-claro { background: #fff; color: var(--ev-tinta); border-color: #D9DEEA; }
+
+/* Éxito */
+.ev-exito { text-align: center; padding: 2.4rem 1.5rem; }
+.ev-exito-icono { display: inline-flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 50%; background: var(--ev-verde-suave); color: #12A06B; }
+.ev-exito h2 { margin-top: 1rem !important; font-size: 1.6rem; font-weight: 800; }
+.ev-exito p { margin-top: 0.5rem !important; }
+.ev-exito .ev-boton { margin-top: 1.4rem; }
+
+/* Promedios del delegado */
+.ev-promedios { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+.ev-promedios li { display: grid; grid-template-columns: 1fr 140px 44px; align-items: center; gap: 0.8rem; font-size: 0.92rem; }
+.ev-promedios b { text-align: right; font-size: 1.1rem; }
+.ev-barra { display: block; height: 10px; border-radius: 999px; background: #EEF1F7; overflow: hidden; }
+.ev-barra i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #E8506A, var(--ev-rojo)); }
+.ev-global { display: flex; align-items: center; gap: 0.5rem; margin-top: 1.2rem !important; padding: 0.9rem 1.1rem; background: var(--ev-rojo-suave); border-radius: 12px; }
+.ev-global svg { color: var(--ev-rojo); }
+
+/* Recuadro dentro de la página del curso */
+.ev-delegado { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.1rem; }
+.ev-delegado small { display: block; color: #6B7790; font-size: 0.8rem; }
+.ev-delegado b { font-size: 1.05rem; }
+.ev-enlace { display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1rem; padding: 0.7rem 1.1rem; border: 1.5px solid #D9DEEA; border-radius: 10px; color: #0B1B3B; font-weight: 700; text-decoration: none; }
+.ev-enlace:hover { border-color: #B9C1D4; }
+.ev-enlace-rojo { background: #C8102E; border-color: #C8102E; color: #fff; }
+.ev-enlace-rojo:hover { background: #A50D26; border-color: #A50D26; }
+.ev-hecho { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; color: #1C7A4E; font-weight: 600; }
+
+@media (max-width: 560px) {
+  .ev-pagina h1 { font-size: 1.8rem; }
+  .ev-notas { grid-template-columns: repeat(5, 1fr); }
+  .ev-promedios li { grid-template-columns: 1fr 44px; } .ev-promedios .ev-barra { grid-column: 1 / -1; order: 3; }
+  .ev-acciones { flex-direction: column-reverse; } .ev-boton { width: 100%; }
+}
+.ev-delegado + .cu-texto-lateral { margin-top: 0.9rem; }
