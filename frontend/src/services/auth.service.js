@@ -12,5 +12,10 @@ export const logout = () => api.post('/auth/logout');
 
 export const obtenerSesion = () => api.get('/auth/yo');
 
+// La respuesta es siempre la misma exista o no la cuenta (anti-enumeración);
+// la BD aplica un cooldown de 60 s por cuenta entre reenvíos.
+export const reenviarVerificacion = (correo) =>
+  api.post('/auth/reenviar-verificacion', { correo });
+
 export const cambiarContrasena = (contrasenaActual, contrasenaNueva) =>
   api.post('/auth/cambiar-contrasena', { contrasenaActual, contrasenaNueva });

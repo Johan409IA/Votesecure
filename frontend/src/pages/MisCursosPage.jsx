@@ -5,6 +5,7 @@ import {
   LayoutGrid, Lock, MousePointerClick, Plus, User, Vote,
 } from 'lucide-react';
 import ModalUnirse from '../components/ModalUnirse';
+import ReenviarVerificacion from '../components/ReenviarVerificacion';
 import { useAuth } from '../hooks/useAuth';
 import { cargarCursos } from '../services/curso.service';
 import { ESTADOS, iniciales } from '../utils/cursos';
@@ -125,6 +126,7 @@ export default function MisCursosPage() {
         {sigueSinVerificar && (
           <div className="aviso aviso-info">Todavía no vemos tu correo como verificado.</div>
         )}
+        <ReenviarVerificacion correo={usuario.correo} />
         <button type="button" className="boton boton-rojo" onClick={yaVerifique}>
           Ya verifiqué mi correo
         </button>

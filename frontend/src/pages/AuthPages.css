@@ -174,6 +174,29 @@
 .auth-pie a { color: var(--a-rojo); font-weight: 700; text-decoration: none; }
 .auth-pie a:hover { text-decoration: underline; }
 
+/* ── Reenvío de verificación ───────────────────────────────── */
+.reenvio-caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0.9rem;
+}
+.reenvio-boton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--a-rojo);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.reenvio-boton:hover { color: var(--a-rojo-osc); }
+.reenvio-boton:disabled { color: var(--a-gris); cursor: default; text-decoration: none; }
+.reenvio-mensaje { margin: 0; font-size: 0.88rem; color: var(--a-gris); text-align: center; }
+
 /* ── Mensajes ──────────────────────────────────────────────── */
 .auth-alerta {
   padding: 0.85rem 1rem;

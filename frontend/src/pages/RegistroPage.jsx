@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Info, Lock, Mail, User } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
+import ReenviarVerificacion from '../components/ReenviarVerificacion';
 import { useAuth } from '../hooks/useAuth';
 
 // Mismas reglas del backend: u... = estudiante, c... = docente.
@@ -69,6 +70,7 @@ export default function RegistroPage() {
             Si el correo es válido, te enviamos un enlace para verificar tu cuenta. El enlace vence en 24 horas.
           </p>
         </div>
+        <ReenviarVerificacion correo={form.correo.trim().toLowerCase()} />
         <Link to="/login" className="auth-boton">
           Ir a iniciar sesión <ArrowRight size={19} />
         </Link>
