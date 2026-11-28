@@ -75,20 +75,20 @@ describe.skipIf(!CONNECTION_AVAILABLE)('flujo electoral completo (transaccion co
     // usuarios de prueba
     const teacher = await asApi(
       `SELECT crear_usuario($1,$2,'docente',$3,$4::bytea, now() + interval '1 day') AS id`,
-      ['Docente Prueba', 'c.docente@utp.edu.pe', hash, VERIFICATION_HASH]
+      ['Docente Prueba', 'c99002@utp.edu.pe', hash, VERIFICATION_HASH]
     );
     teacherId = Number(teacher.rows[0].id);
     for (let i = 1; i <= 3; i++) {
       const result = await asApi(
         `SELECT crear_usuario($1,$2,'estudiante',$3,$4::bytea, now() + interval '1 day') AS id`,
-        [`Estudiante ${i}`, `u2023000${i}@utp.edu.pe`, hash, VERIFICATION_HASH]
+        [`Estudiante ${i}`, `u9900000${i}@utp.edu.pe`, hash, VERIFICATION_HASH]
       );
       studentIds.push(Number(result.rows[0].id));
     }
     // verificacion de correo por la funcion oficial (limpia el hash de verificacion)
     for (const email of [
-      'c.docente@utp.edu.pe',
-      ...studentIds.map((_, i) => `u2023000${i + 1}@utp.edu.pe`)
+      'c99002@utp.edu.pe',
+      ...studentIds.map((_, i) => `u9900000${i + 1}@utp.edu.pe`)
     ]) {
       const result = await asApi(`SELECT confirmar_correo($1, $2) AS ok`, [
         email,

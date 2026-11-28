@@ -4,7 +4,7 @@ import { hash } from '@node-rs/argon2';
 import { loadServerEnv } from '../../src/config/env';
 
 // Seed de datos de demostracion (NO es una migracion: no va en backend/sql/).
-// Crea un admin, un docente, estudiantes (7 matriculados y 1 libre para
+// Crea un docente, estudiantes (7 matriculados y 1 libre para
 // demostrar /secciones/unirse) y una eleccion principal ya activada con
 // programar_eleccion + activar_eleccion (el padron se congela por el camino
 // oficial, sin saltarse triggers). Idempotente: si la seccion demo ya existe,
@@ -63,12 +63,12 @@ async function main(): Promise<void> {
       }
 
       // Usuarios demo, todos con correo verificado (sin token pendiente).
+      // Formato institucional real: docente c + 5 digitos, estudiante u + 8.
       const users: Array<{ nombre: string; correo: string; tipo: string }> = [
-        { nombre: 'Administrador Demo', correo: 'admin.demo@votesecureapp.com', tipo: 'administrador' },
-        { nombre: 'Docente Demo', correo: 'c2026001@utp.edu.pe', tipo: 'docente' },
+        { nombre: 'Docente Demo', correo: 'c23001@utp.edu.pe', tipo: 'docente' },
         ...Array.from({ length: 8 }, (_, i) => ({
           nombre: `Estudiante Demo ${i + 1}`,
-          correo: `u202600${i + 1}@utp.edu.pe`,
+          correo: `u2327200${i + 1}@utp.edu.pe`,
           tipo: 'estudiante'
         }))
       ];
@@ -85,9 +85,9 @@ async function main(): Promise<void> {
         [users.map((u) => u.correo)]
       );
       const idOf = new Map(ids.rows.map((row) => [row.correo, Number(row.id)]));
-      const docenteId = idOf.get('c2026001@utp.edu.pe')!;
+      const docenteId = idOf.get('c23001@utp.edu.pe')!;
       const studentIds = Array.from({ length: 8 }, (_, i) =>
-        idOf.get(`u202600${i + 1}@utp.edu.pe`)!
+        idOf.get(`u2327200${i + 1}@utp.edu.pe`)!
       );
 
       const section = await client.query<{ id: string }>(
@@ -142,10 +142,9 @@ async function main(): Promise<void> {
       console.log('Seed demo aplicado correctamente.');
       console.log(`  Seccion:   ${SECTION_CODE} (id ${sectionId})`);
       console.log(`  Eleccion:  id ${electionId}, estado activa, lista para votar`);
-      console.log('  Admin:     admin.demo@votesecureapp.com');
-      console.log('  Docente:   c2026001@utp.edu.pe');
-      console.log('  Estudiantes matriculados: u2026001@utp.edu.pe .. u2026007@utp.edu.pe');
-      console.log('  Estudiante libre (para unirse): u2026008@utp.edu.pe');
+      console.log('  Docente:   c23001@utp.edu.pe');
+      console.log('  Estudiantes matriculados: u23272001@utp.edu.pe .. u23272007@utp.edu.pe');
+      console.log('  Estudiante libre (para unirse): u23272008@utp.edu.pe');
       console.log('  Contrasena: la indicada en --contrasena (no se guarda en claro)');
     } catch (error) {
       await client.query('ROLLBACK');

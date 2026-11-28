@@ -35,8 +35,8 @@ Comandos (dentro de `backend/`): `npm ci`, `npm run dev`, `npm run build`, `npm 
 
 Existen exactamente **tres roles mutuamente excluyentes**. El rol se **deriva del correo institucional** al registrarse (`application/services/roles.ts`):
 
-- Correo que empieza con `u` (`u...@utp.edu.pe`) → **estudiante**
-- Correo que empieza con `c` (`c...@utp.edu.pe`) → **docente**
+- Correo que empieza con `u` más **8 dígitos** (`u23272054@utp.edu.pe`) → **estudiante**
+- Correo que empieza con `c` más **5 dígitos** (`c22834@utp.edu.pe`) → **docente**
 - **Administrador**: nunca se registra por la API pública; se crea solo con la CLI `npm run admin:provisionar -- --correo <correo> --nombre <nombre> --contrasena <clave 15+>` (rol de BD privilegiado `votesecure_provisionamiento`). El correo **no tiene que ser UTP**: sirve cualquier correo válido (p. ej. un Gmail real). La CLI **envía el enlace de verificación (24 h) por correo** — Resend en producción, o en desarrollo con `CORREO_REAL_EN_LOCAL=true` — y además lo imprime en consola por si el envío falla; ojo: `POST /api/auth/reenviar-verificacion` **solo acepta correos UTP**, así que si el enlace vence la única salida es volver a provisionar con otro correo (o recrear la fila en BD). Todos los roles inician sesión en el **mismo formulario** (`POST /api/auth/login`); el frontend distingue al admin por `usuario.tipo === 'administrador'`.
 
 Casi todas las funcionalidades exigen además el **correo verificado** (confirmación por enlace enviado con Resend, válida 24 h; se puede reenviar con `POST /api/auth/reenviar-verificacion`).
@@ -48,7 +48,7 @@ Casi todas las funcionalidades exigen además el **correo verificado** (confirma
 3. La CLI **envía el enlace de verificación a ese correo** (y lo imprime en consola por si el envío falla); al abrir el enlace, la cuenta queda verificada y lista.
 4. Se entra por el **mismo formulario de login** que estudiantes y docentes; el frontend decide las pantallas de admin según `usuario.tipo === 'administrador'`. No hay registro ni pantalla de login separados.
 
-**Datos de demostración:** `npm run seed:demo -- --contrasena <clave de 15+ caracteres>` crea (solo en desarrollo, idempotente) un admin (`admin.demo@votesecureapp.com`), un docente (`c2026001@utp.edu.pe`), 8 estudiantes (`u2026001@utp.edu.pe` … `u2026008@utp.edu.pe`, el 8 sin matricular para probar el auto-matrícula), la sección `SEC-DM25` y una elección ya **activa y lista para votar** (activada con `programar_eleccion` + `activar_eleccion`, sin votos). Todos los correos salen verificados y comparten la contraseña indicada.
+**Datos de demostración:** `npm run seed:demo -- --contrasena <clave de 15+ caracteres>` crea (solo en desarrollo, idempotente) un docente (`c23001@utp.edu.pe`), 8 estudiantes (`u23272001@utp.edu.pe` … `u23272008@utp.edu.pe`, el 8 sin matricular para probar el auto-matrícula), la sección `SEC-DM25` y una elección ya **activa y lista para votar** (activada con `programar_eleccion` + `activar_eleccion`, sin votos). Todos los correos salen verificados y comparten la contraseña indicada. No crea administrador: ese se provisiona aparte con `admin:provisionar`. `npm run demo:limpiar` elimina todos estos datos (se niega si la elección demo ya tiene votos; exige conexión privilegiada de superusuario porque desactiva los triggers de inmutabilidad de auditoría y padrón dentro de su transacción).
 
 ### 3.1 Estudiante — participa
 
@@ -263,7 +263,7 @@ Todas las rutas cuelgan de `/api`. Las mutantes (`POST`, `PATCH`, `DELETE`) exig
 
 ## 6. Base de datos (PostgreSQL en Supabase)
 
-Fuentes de verdad: `backend/sql/001_esquema_oficial.sql` (esquema) y `002_operaciones_y_roles.sql` … `009_foto_y_reenvio_verificacion.sql` (migraciones). Convención: tablas, columnas y funciones en **español**. Todas las claves primarias son `bigint` con identidad automática. `009` añade `usuarios.foto` (data URL JPEG, máx. 90 000 caracteres) y las funciones `SECURITY DEFINER` `actualizar_foto_usuario` y `regenerar_verificacion` (con cooldown de 60 s). Para aplicar solo una migración: `npm run db:aplicar -- --solo 009_foto_y_reenvio_verificacion.sql` (la aplicación completa no es idempotente).
+Fuentes de verdad: `backend/sql/001_esquema_oficial.sql` (esquema) y `002_operaciones_y_roles.sql` … `010_formato_correo.sql` (migraciones). Convención: tablas, columnas y funciones en **español**. Todas las claves primarias son `bigint` con identidad automática. `009` añade `usuarios.foto` (data URL JPEG, máx. 90 000 caracteres) y las funciones `SECURITY DEFINER` `actualizar_foto_usuario` y `regenerar_verificacion` (con cooldown de 60 s); `010` endurece el `CHECK` de formato de correo al código institucional real (u + 8 dígitos / c + 5 dígitos). Para aplicar solo una migración: `npx tsx --env-file=.env scripts/db/apply-sql.ts --solo 010_formato_correo.sql` (la aplicación completa no es idempotente; `npm run db:aplicar -- --solo X` no pasa el argumento por npm).
 
 ### 6.1 Diagrama de relaciones (resumen)
 
@@ -305,7 +305,7 @@ usuarios ─┬─< matriculas >────── secciones ──────<
 | `activo` | boolean | Cuenta habilitada (`false` = suspendida). |
 | `creado_en` | timestamptz | Fecha de creación. |
 
-Restricciones: el formato del correo debe corresponder al tipo (`u…@utp.edu.pe` para estudiante, `c…@utp.edu.pe` para docente), y los campos de verificación/sesión son coherentes entre sí (o todos vacíos, o token completo con caducidad).
+Restricciones: el formato del correo debe corresponder al tipo con el **código institucional real** (`u` + 8 dígitos para estudiante, `c` + 5 dígitos para docente — migración `010`; el administrador acepta cualquier correo válido), y los campos de verificación/sesión son coherentes entre sí (o todos vacíos, o token completo con caducidad).
 
 #### `secciones` — cursos por periodo académico
 
@@ -555,6 +555,7 @@ Así el cierre automático por horario del §6.1 ocurre sin intervención humana
 ## 9. Seguridad transversal (resumen)
 
 - **Sesiones**: cookie `HttpOnly; SameSite=Lax; Secure` (producción); en BD solo el hash SHA-256 del token; cada petición valida vigencia y revocación → logout y desactivación de cuenta son **inmediatos**.
+- **Una sola sesión activa por cuenta**: el login guarda el hash en `usuarios.sesion_hash` (una columna) y **cada `POST /api/auth/login` lo sobrescribe**, así que iniciar sesión en otro dispositivo o navegador **invalida la sesión anterior sin aviso** — el dispositivo previo deja de estar autenticado en su siguiente petición (no hay mensaje de "sesión cerrada en otro dispositivo"). Consecuencias prácticas: no se pueden mantener dos dispositivos con la misma cuenta a la vez, y en un mismo navegador solo puede haber una cuenta activa (la cookie se sobrescribe; dos cuentas simultáneas exigirían dos navegadores). El doble voto es imposible aunque se lo intente: el voto va ligado a la matrícula en `habilitaciones_voto` (`UNIQUE eleccion_id + matricula_id`, marca `ha_votado` de falso a verdadero una sola vez dentro de `registrar_voto`), no a la sesión.
 - **CSRF**: *double-submit cookie/header* (`X-CSRF-Token`) + coincidencia de cabecera `Origin` con `FRONTEND_URL`.
 - **Contraseñas**: Argon2id con salt aleatorio.
 - **Rate limiting**: 600 req/15 min (general), 20 login/15 min, 10 registro/h, 10 unirse/h (el código de sección es un secreto corto).

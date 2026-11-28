@@ -5,13 +5,21 @@ import {
 } from '../../src/application/services/roles';
 
 describe('derivacion de rol por correo', () => {
-  it('acepta correos de estudiante UTP', () => {
+  it('acepta correos de estudiante UTP (u + 8 digitos)', () => {
     expect(deriveUserTypeFromEmail('u20231234@utp.edu.pe')).toBe('estudiante');
     expect(deriveUserTypeFromEmail('  U20231234@utp.edu.pe ')).toBe('estudiante');
   });
 
-  it('acepta correos de docente UTP', () => {
-    expect(deriveUserTypeFromEmail('c.perez@utp.edu.pe')).toBe('docente');
+  it('acepta correos de docente UTP (c + 5 digitos)', () => {
+    expect(deriveUserTypeFromEmail('c22834@utp.edu.pe')).toBe('docente');
+  });
+
+  it('rechaza codigos con cantidad de digitos incorrecta', () => {
+    expect(deriveUserTypeFromEmail('u2023123@utp.edu.pe')).toBeNull();
+    expect(deriveUserTypeFromEmail('u202312345@utp.edu.pe')).toBeNull();
+    expect(deriveUserTypeFromEmail('c2283@utp.edu.pe')).toBeNull();
+    expect(deriveUserTypeFromEmail('c228345@utp.edu.pe')).toBeNull();
+    expect(deriveUserTypeFromEmail('c.perez@utp.edu.pe')).toBeNull();
   });
 
   it('rechaza otros dominios o patrones', () => {

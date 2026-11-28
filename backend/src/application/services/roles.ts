@@ -1,7 +1,9 @@
 export type UserType = 'estudiante' | 'docente' | 'administrador';
 
-const STUDENT_PATTERN = /^u[a-z0-9._%+-]*@utp\.edu\.pe$/;
-const TEACHER_PATTERN = /^c[a-z0-9._%+-]*@utp\.edu\.pe$/;
+// Codigo institucional real de la UTP: estudiante u + 8 digitos,
+// docente c + 5 digitos. El administrador no se deriva del correo.
+const STUDENT_PATTERN = /^u\d{8}@utp\.edu\.pe$/;
+const TEACHER_PATTERN = /^c\d{5}@utp\.edu\.pe$/;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

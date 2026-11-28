@@ -25,10 +25,14 @@ import { createSavepointPool } from '../../tests/helpers/transactional-pool';
 
 const PASSWORD = 'clave-smoke-fase-nueve';
 const STAMP = Date.now();
+// Rango numerico reservado para el smoke: el codigo institucional real nunca
+// empieza con 9 (docente c9xxxx = 5 digitos, estudiante u9xxxxxxx = 8).
+// El STAMP da unicidad dentro de una ventana de horas; el smoke revierte todo
+// con ROLLBACK, asi que una colision teorica no deja filas detras.
 const EMAILS = {
-  teacher: `c.smoke${STAMP}@utp.edu.pe`,
-  studentA: `u.smoke${STAMP}a@utp.edu.pe`,
-  studentB: `u.smoke${STAMP}b@utp.edu.pe`,
+  teacher: `c9${String(STAMP % 10000).padStart(4, '0')}@utp.edu.pe`,
+  studentA: `u9${String(STAMP % 10000000).padStart(7, '0')}@utp.edu.pe`,
+  studentB: `u9${String((STAMP + 1) % 10000000).padStart(7, '0')}@utp.edu.pe`,
   admin: `admin.smoke${STAMP}@utp.edu.pe`
 };
 
@@ -550,7 +554,9 @@ async function main(): Promise<void> {
     await client.query('ROLLBACK');
     const trace = await client.query(
       `SELECT count(*) AS total FROM usuarios
-        WHERE correo LIKE '%smoke%@utp.edu.pe'`
+        WHERE correo LIKE '%smoke%@utp.edu.pe'
+           OR correo ~ '^c9[0-9]{4}@utp[.]edu[.]pe$'
+           OR correo ~ '^u9[0-9]{7}@utp[.]edu[.]pe$'`
     );
     if (Number(trace.rows[0].total) !== 0) {
       throw new Error('El rollback no revirtio todos los datos del smoke');

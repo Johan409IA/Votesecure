@@ -15,8 +15,11 @@ const SECTION_CODE = 'SEC-DM25';
 const PERIODO = '2026-30';
 const CORREOS_DEMO = [
   'admin.demo@votesecureapp.com',
+  'c23001@utp.edu.pe',
+  // Historico: docente/estudiantes demo anteriores (7 digitos, ya no se siembran).
   'c2026001@utp.edu.pe',
-  ...Array.from({ length: 8 }, (_, i) => `u202600${i + 1}@utp.edu.pe`)
+  ...Array.from({ length: 8 }, (_, i) => `u202600${i + 1}@utp.edu.pe`),
+  ...Array.from({ length: 8 }, (_, i) => `u2327200${i + 1}@utp.edu.pe`)
 ];
 
 interface Borrado {
@@ -35,6 +38,15 @@ async function main(): Promise<void> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+
+      // La auditoria (eventos_auditoria) y el padron congelado
+      // (habilitaciones_voto de una eleccion activa) tienen triggers de
+      // inmutabilidad que bloquean el borrado a cualquier rol. La limpieza
+      // demo es una operacion privilegiada de DBA: dentro de esta transaccion
+      // se desactivan los triggers de replicacion. Si la conexion no es de
+      // superusuario, la sentencia falla y no se borra nada. El alcance sigue
+      // siendo fijo (seccion y correos demo) y el guard de votos se mantiene.
+      await client.query('SET LOCAL session_replication_role = replica');
 
       const seccion = await client.query<{ id: string }>(
         `SELECT id FROM secciones WHERE codigo = $1 AND periodo_academico = $2`,

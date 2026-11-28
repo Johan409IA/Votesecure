@@ -26,7 +26,7 @@ describe('validacion de registro', () => {
   });
 
   it('acepta correos institucionales de estudiante y docente (§2.1)', () => {
-    expect(registerSchema.parse({ ...base, correo: 'c.perez@utp.edu.pe' })).toBeTruthy();
+    expect(registerSchema.parse({ ...base, correo: 'c22834@utp.edu.pe' })).toBeTruthy();
   });
 
   it('rechaza correos fuera de los regex UTP por rol', () => {
@@ -34,6 +34,8 @@ describe('validacion de registro', () => {
     expect(() => registerSchema.parse({ ...base, correo: 'x2023@utp.edu.pe' })).toThrow();
     expect(() => registerSchema.parse({ ...base, correo: 'admin@utp.edu.pe' })).toThrow();
     expect(() => registerSchema.parse({ ...base, correo: 'u2023@utp.edu.pe.com' })).toThrow();
+    expect(() => registerSchema.parse({ ...base, correo: 'u2023123@utp.edu.pe' })).toThrow();
+    expect(() => registerSchema.parse({ ...base, correo: 'c2283@utp.edu.pe' })).toThrow();
   });
 
   it('normaliza el correo a minusculas', () => {

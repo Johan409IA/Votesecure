@@ -19,7 +19,7 @@ export const registerSchema = z.object({
     .pipe(z.email())
     .refine((value) => deriveUserTypeFromEmail(value) !== null, {
       message:
-        'El correo debe ser institucional UTP: estudiante (u...@utp.edu.pe) o docente (c...@utp.edu.pe)'
+        'El correo debe ser institucional UTP: estudiante (u + 8 digitos @utp.edu.pe) o docente (c + 5 digitos @utp.edu.pe)'
     }),
   contrasena: z
     .string()
@@ -44,7 +44,7 @@ export const resendVerificationSchema = z.object({
     .pipe(z.email())
     .refine((value) => deriveUserTypeFromEmail(value) !== null, {
       message:
-        'El correo debe ser institucional UTP: estudiante (u...@utp.edu.pe) o docente (c...@utp.edu.pe)'
+        'El correo debe ser institucional UTP: estudiante (u + 8 digitos @utp.edu.pe) o docente (c + 5 digitos @utp.edu.pe)'
     })
 });
 

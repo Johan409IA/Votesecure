@@ -237,14 +237,14 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
       const hash = await hashPassword(PASSWORD);
       const teacher = await asApi(
         `SELECT crear_usuario($1,$2,'docente',$3,$4::bytea, now() + interval '1 day') AS id`,
-        ['Docente Fase Nueve', 'c.fase9.docente@utp.edu.pe', hash, VERIFICATION_HASH]
+        ['Docente Fase Nueve', 'c99001@utp.edu.pe', hash, VERIFICATION_HASH]
       );
       teacherId = Number(teacher.rows[0].id);
       const names: Array<['s1' | 's2' | 's3' | 's4', string, string]> = [
-        ['s1', 'Alumna Uno Fase9', 'u.fase9.alumno1@utp.edu.pe'],
-        ['s2', 'Alumno Dos Fase9', 'u.fase9.alumno2@utp.edu.pe'],
-        ['s3', 'Alumna Tres Fase9', 'u.fase9.alumno3@utp.edu.pe'],
-        ['s4', 'Alumno Cuatro Fase9', 'u.fase9.alumno4@utp.edu.pe']
+        ['s1', 'Alumna Uno Fase9', 'u99000001@utp.edu.pe'],
+        ['s2', 'Alumno Dos Fase9', 'u99000002@utp.edu.pe'],
+        ['s3', 'Alumna Tres Fase9', 'u99000003@utp.edu.pe'],
+        ['s4', 'Alumno Cuatro Fase9', 'u99000004@utp.edu.pe']
       ];
       for (const [key, name, email] of names) {
         const result = await asApi(
@@ -262,11 +262,11 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
       );
 
       for (const email of [
-        'c.fase9.docente@utp.edu.pe',
-        'u.fase9.alumno1@utp.edu.pe',
-        'u.fase9.alumno2@utp.edu.pe',
-        'u.fase9.alumno3@utp.edu.pe',
-        'u.fase9.alumno4@utp.edu.pe',
+        'c99001@utp.edu.pe',
+        'u99000001@utp.edu.pe',
+        'u99000002@utp.edu.pe',
+        'u99000003@utp.edu.pe',
+        'u99000004@utp.edu.pe',
         'admin.fase9@utp.edu.pe'
       ]) {
         const result = await asApi(`SELECT confirmar_correo($1, $2) AS ok`, [
@@ -276,12 +276,12 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
         expect(result.rows[0].ok).toBe(true);
       }
 
-      sessions.teacher = await login('c.fase9.docente@utp.edu.pe');
+      sessions.teacher = await login('c99001@utp.edu.pe');
       sessions.admin = await login('admin.fase9@utp.edu.pe');
-      sessions.s1 = await login('u.fase9.alumno1@utp.edu.pe');
-      sessions.s2 = await login('u.fase9.alumno2@utp.edu.pe');
-      sessions.s3 = await login('u.fase9.alumno3@utp.edu.pe');
-      sessions.s4 = await login('u.fase9.alumno4@utp.edu.pe');
+      sessions.s1 = await login('u99000001@utp.edu.pe');
+      sessions.s2 = await login('u99000002@utp.edu.pe');
+      sessions.s3 = await login('u99000003@utp.edu.pe');
+      sessions.s4 = await login('u99000004@utp.edu.pe');
     });
 
     afterAll(async () => {
@@ -1090,7 +1090,7 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
       // Y la nueva contrasena abre sesion.
       const relogin = await request(app)
         .post('/api/auth/login')
-        .send({ correo: 'u.fase9.alumno1@utp.edu.pe', contrasena: 'una-clave-nueva-muy-segura' });
+        .send({ correo: 'u99000001@utp.edu.pe', contrasena: 'una-clave-nueva-muy-segura' });
       expect(relogin.status).toBe(200);
     });
 
@@ -1157,11 +1157,11 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
 
       const filtered = await get(
         sessions.admin,
-        '/api/usuarios?busqueda=fase9.docente&tipo=docente'
+        '/api/usuarios?busqueda=99001&tipo=docente'
       );
       expect(filtered.status).toBe(200);
       expect(filtered.body.usuarios.length).toBe(1);
-      expect(filtered.body.usuarios[0].correo).toBe('c.fase9.docente@utp.edu.pe');
+      expect(filtered.body.usuarios[0].correo).toBe('c99001@utp.edu.pe');
       expect(filtered.body.usuarios[0].correoVerificado).toBe(true);
       expect(filtered.body.usuarios[0].activa).toBe(true);
     });
@@ -1169,10 +1169,10 @@ describe.skipIf(!CONNECTION_AVAILABLE)(
     it('el reenvio de verificacion responde igual exista o no la cuenta', async () => {
       const existente = await request(app)
         .post('/api/auth/reenviar-verificacion')
-        .send({ correo: 'u.fase9.alumno2@utp.edu.pe' });
+        .send({ correo: 'u99000002@utp.edu.pe' });
       const inexistente = await request(app)
         .post('/api/auth/reenviar-verificacion')
-        .send({ correo: 'u.nadie@utp.edu.pe' });
+        .send({ correo: 'u99000099@utp.edu.pe' });
       expect(existente.status).toBe(200);
       expect(inexistente.status).toBe(200);
       expect(existente.body).toEqual(inexistente.body);

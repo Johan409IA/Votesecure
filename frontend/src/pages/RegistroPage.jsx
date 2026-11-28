@@ -5,8 +5,9 @@ import AuthLayout from '../components/AuthLayout';
 import ReenviarVerificacion from '../components/ReenviarVerificacion';
 import { useAuth } from '../hooks/useAuth';
 
-// Mismas reglas del backend: u... = estudiante, c... = docente.
-const REGEX_CORREO_UTP = /^[uc][a-z0-9._%+-]*@utp\.edu\.pe$/;
+// Mismas reglas del backend: u + 8 dígitos = estudiante, c + 5 dígitos = docente.
+const REGEX_ESTUDIANTE = /^u\d{8}@utp\.edu\.pe$/;
+const REGEX_DOCENTE = /^c\d{5}@utp\.edu\.pe$/;
 const CONTRASENA_MIN = 15;
 const CONTRASENA_MAX = 128;
 
@@ -14,8 +15,9 @@ function validar(form) {
   const nombre = form.nombre.trim();
   if (nombre.length < 3) return 'Escribe tu nombre completo (mínimo 3 letras).';
   if (nombre.length > 120) return 'El nombre es demasiado largo.';
-  if (!REGEX_CORREO_UTP.test(form.correo.trim().toLowerCase())) {
-    return 'Usa tu correo institucional: estudiante (u…@utp.edu.pe) o docente (c…@utp.edu.pe).';
+  const correo = form.correo.trim().toLowerCase();
+  if (!REGEX_ESTUDIANTE.test(correo) && !REGEX_DOCENTE.test(correo)) {
+    return 'Usa tu correo institucional: estudiante (u + 8 dígitos @utp.edu.pe) o docente (c + 5 dígitos @utp.edu.pe).';
   }
   if (form.contrasena.length < CONTRASENA_MIN) {
     return `La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres.`;
@@ -114,7 +116,7 @@ export default function RegistroPage() {
               onChange={cambiar('correo')}
             />
           </div>
-          <p className="auth-ayuda"><Info size={14} /> Estudiantes: u…@utp.edu.pe · Docentes: c…@utp.edu.pe</p>
+              <p className="auth-ayuda"><Info size={14} /> Estudiantes: u + 8 dígitos @utp.edu.pe · Docentes: c + 5 dígitos @utp.edu.pe</p>
         </div>
 
         <div className="auth-grupo">

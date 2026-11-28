@@ -61,7 +61,7 @@ export async function registerUser(
   const type = deriveUserTypeFromEmail(normalizedEmail);
   if (!type) {
     throw new BusinessError(
-      'El correo debe ser institucional UTP: estudiante (u...@utp.edu.pe) o docente (c...@utp.edu.pe)'
+      'El correo debe ser institucional UTP: estudiante (u + 8 digitos @utp.edu.pe) o docente (c + 5 digitos @utp.edu.pe)'
     );
   }
   if (
