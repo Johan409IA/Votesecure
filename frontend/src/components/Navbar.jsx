@@ -4,9 +4,13 @@ import { useAuth } from '../hooks/useAuth';
 import Avatar from './Avatar';
 import './Navbar.css';
 
-// Enlaces de la barra. Se irán agregando aquí al construir cada pantalla.
-const ENLACES = [
+// Enlaces de la barra según el rol. Docentes y administradores entran al panel
+// (su menú lateral está en src/panel/menu.js); los estudiantes, a sus cursos.
+const ENLACES_ESTUDIANTE = [
   { to: '/cursos', label: 'Mis cursos' },
+];
+const ENLACES_PANEL = [
+  { to: '/panel', label: 'Panel' },
 ];
 
 const ETIQUETA_ROL = {
@@ -21,6 +25,9 @@ export default function Navbar() {
 
   if (!auth.estaAutenticado) return null;
 
+  const enPanel = auth.esAdmin || auth.esDocente;
+  const enlaces = enPanel ? ENLACES_PANEL : ENLACES_ESTUDIANTE;
+
   const cerrarSesion = async () => {
     await auth.logout();
     navigate('/login');
@@ -28,12 +35,12 @@ export default function Navbar() {
 
   return (
     <header className="topbar">
-      <NavLink to="/cursos" className="topbar-marca" aria-label="VoteSecure, ir a mis cursos">
+      <NavLink to={enlaces[0].to} className="topbar-marca" aria-label="VoteSecure, ir al inicio">
         <img src="/assets/logo_votesecure.png" alt="VoteSecure UTP" />
       </NavLink>
 
       <nav className="topbar-enlaces">
-        {ENLACES.map((enlace) => (
+        {enlaces.map((enlace) => (
           <NavLink
             key={enlace.to}
             to={enlace.to}
