@@ -14,6 +14,8 @@
   margin: 0 auto;
   padding: 1.75rem 1.5rem 2.5rem;
 }
+/* El panel de docentes y administradores aprovecha más ancho de pantalla. */
+.marco-contenido.ancho { max-width: 1500px; }
 .marco-pie {
   background: #fff;
   border-top: 1px solid #E3E6EF;
